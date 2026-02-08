@@ -1,0 +1,52 @@
+[
+  {
+    "permitId": "BLD-2025-04821",
+    "status": "approved",
+    "issuedDate": 1733011200,
+    "expiryDate": 1764547200,
+    "department": "building",
+    "description": "General building permit — mixed-use commercial/residential structure",
+    "inspectionsPassed": 4,
+    "inspectionsRequired": 8
+  },
+  {
+    "permitId": "ELEC-2025-09134",
+    "status": "approved",
+    "issuedDate": 1734220800,
+    "expiryDate": 1765756800,
+    "department": "electrical",
+    "description": "Electrical installation permit — main distribution and sub-panels",
+    "inspectionsPassed": 2,
+    "inspectionsRequired": 5
+  },
+  {
+    "permitId": "PLB-2025-06277",
+    "status": "pending",
+    "issuedDate": 0,
+    "expiryDate": 0,
+    "department": "plumbing",
+    "description": "Plumbing rough-in permit — water supply and drainage systems",
+    "inspectionsPassed": 0,
+    "inspectionsRequired": 4
+  },
+  {
+    "permitId": "ENV-2025-01455",
+    "status": "approved",
+    "issuedDate": 1731801600,
+    "expiryDate": 1763337600,
+    "department": "environmental",
+    "description": "Environmental compliance permit — stormwater management and remediation",
+    "inspectionsPassed": 3,
+    "inspectionsRequired": 3
+  },
+  {
+    "permitId": "FIRE-2025-03298",
+    "status": "approved",
+    "issuedDate": 1733616000,
+    "expiryDate": 1765152000,
+    "department": "fire",
+    "description": "Fire protection system permit — sprinkler and alarm installation",
+    "inspectionsPassed": 1,
+    "inspectionsRequired": 4
+  }
+]

@@ -1,0 +1,53 @@
+{
+  "name": "revitalization-protocol",
+  "version": "0.1.0",
+  "description": "Infrastructure Revitalization Protocol — Chainlink CRE-powered platform for reviving stalled construction & infrastructure projects",
+  "author": "Willis — Revitalization Protocol Team",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "setup": "bunx cre-setup",
+    "build": "bun run build:wasm",
+    "build:wasm": "cre workflow build src/workflows/solvency-oracle.ts",
+    "build:milestone": "cre workflow build src/workflows/milestone-oracle.ts",
+    "simulate": "cre workflow simulate src/workflows/solvency-oracle.ts --config config/solvency-oracle.config.json",
+    "simulate:milestone": "cre workflow simulate src/workflows/milestone-oracle.ts --config config/milestone-oracle.config.json",
+    "deploy:workflow": "cre workflow deploy src/workflows/solvency-oracle.ts --config config/solvency-oracle.config.json",
+    "deploy:milestone": "cre workflow deploy src/workflows/milestone-oracle.ts --config config/milestone-oracle.config.json",
+    "deploy:contracts": "bun run scripts/deploy-solvency.ts",
+    "deploy:all": "bun run deploy:contracts && bun run deploy:workflow",
+    "generate:bindings": "cre evm generate-bindings src/contracts/SolvencyConsumer.sol",
+    "test": "bun test",
+    "lint": "bunx @biomejs/biome check src/",
+    "format": "bunx @biomejs/biome format --write src/"
+  },
+  "dependencies": {
+    "@chainlink/cre-sdk": "^1.0.7",
+    "viem": "^2.21.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@biomejs/biome": "^1.9.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "hackathon": {
+    "name": "Chainlink Convergence 2026",
+    "categories": [
+      "DeFi & Tokenization",
+      "Risk & Compliance",
+      "CRE & AI",
+      "Privacy"
+    ],
+    "chainlink_services": [
+      "CRE Workflows",
+      "Data Feeds",
+      "CCIP",
+      "Confidential Compute",
+      "Automation"
+    ]
+  }
+}

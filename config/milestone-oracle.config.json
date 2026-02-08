@@ -1,0 +1,11 @@
+{
+  "schedule": "0 0 * * 1",
+  "projectId": "0x5265766974616c697a6174696f6e50726f746f636f6c000000000000000001",
+  "milestoneId": 0,
+  "evmChainSelectorName": "ethereum-sepolia",
+  "milestoneConsumerAddress": "0x0000000000000000000000000000000000000000",
+  "satelliteApiUrl": "https://your-mock-api.example.com/api/v1/satellite-imagery",
+  "permitApiUrl": "https://your-mock-api.example.com/api/v1/permit-status",
+  "aiProgressAgentUrl": "https://api.anthropic.com/v1/messages",
+  "approvalThreshold": 70
+}

@@ -1,0 +1,126 @@
+---
+title: Revitalization Protocol — System Architecture
+---
+
+flowchart TB
+    subgraph TRIGGERS["⏰ Triggers"]
+        CRON["Cron Trigger<br/>(Every 5 min)"]
+        HTTP_TRIG["HTTP Trigger<br/>(Milestone claims)"]
+        EVENT_TRIG["EVM Log Trigger<br/>(Funding events)"]
+    end
+
+    subgraph CRE_DON["🔗 Chainlink Runtime Environment (CRE DON)"]
+        direction TB
+
+        subgraph WF1["Workflow 1: Solvency Oracle"]
+            FETCH_COST["📊 Fetch Cost Indices<br/>(HTTPClient + Median Consensus)"]
+            READ_CHAIN["⛓️ Read Onchain Financials<br/>(EVMClient)"]
+            FETCH_FUND["💰 Fetch Funding Metrics<br/>(HTTPClient + Field Consensus)"]
+            COMPUTE["🔒 Compute Solvency Score<br/>[Confidential Compute]"]
+            AI_RISK["🤖 AI Risk Agent<br/>(Claude API / x402)"]
+            REPORT1["📝 Generate Signed Report"]
+        end
+
+        subgraph WF2["Workflow 2: Milestone Oracle"]
+            SAT_DATA["🛰️ Fetch Satellite Data<br/>(USGS/Earth Engine API)"]
+            PERMIT["📋 Check Permit Status<br/>(Government API mock)"]
+            AI_PROGRESS["🤖 AI Progress Scorer<br/>(Image Analysis)"]
+            REPORT2["📝 Generate Milestone Report"]
+        end
+
+        subgraph WF3["Workflow 3: Rescue Funding"]
+            CCIP_TRANSFER["🌐 CCIP Cross-Chain<br/>Token Transfer"]
+            TRANCHE["💎 Milestone-Gated<br/>Tranche Release"]
+        end
+
+        subgraph WF4["Workflow 4: Creditor Reconciliation"]
+            VOTE["🗳️ Creditor Voting<br/>[Confidential Compute]"]
+            WATERFALL["💧 Waterfall Payout<br/>Distribution"]
+        end
+    end
+
+    subgraph CHAINS["⛓️ Blockchains"]
+        subgraph SEPOLIA["Ethereum Sepolia"]
+            SOL_CON["SolvencyConsumer.sol"]
+            MILE_CON["MilestoneConsumer.sol"]
+            FUND_CON["TokenizedFundingEngine.sol"]
+            CRED_CON["CreditorReconciliation.sol"]
+        end
+        subgraph POLYGON["Polygon Amoy"]
+            FUND_POLY["FundingEngine (Polygon)"]
+        end
+    end
+
+    subgraph EXTERNAL["🌍 External Data Sources"]
+        CHAINLINK_DF["Chainlink Data Feeds<br/>(ETH/USD, Commodities)"]
+        COST_API["Cost Index API<br/>(Steel, Concrete, Labor)"]
+        FUND_API["Funding Velocity API"]
+        SAT_API["Satellite Imagery API<br/>(USGS / Earth Engine)"]
+        PERMIT_API["Permit Status API"]
+        CLAUDE_API["Anthropic Claude API<br/>(Risk Scoring + Analysis)"]
+    end
+
+    subgraph FRONTEND["🖥️ Dashboard (Next.js)"]
+        DASH["Revitalization Dashboard"]
+        INV_VIEW["Investor Portal<br/>[Private Views]"]
+        CRED_VIEW["Creditor Portal<br/>[Private Views]"]
+    end
+
+    %% Trigger connections
+    CRON --> FETCH_COST
+    CRON --> FETCH_FUND
+    HTTP_TRIG --> SAT_DATA
+    EVENT_TRIG --> CCIP_TRANSFER
+
+    %% Solvency Oracle flow
+    FETCH_COST --> COMPUTE
+    READ_CHAIN --> COMPUTE
+    FETCH_FUND --> COMPUTE
+    COMPUTE --> AI_RISK
+    AI_RISK --> REPORT1
+    REPORT1 -->|"writeReport()"| SOL_CON
+
+    %% Milestone Oracle flow
+    SAT_DATA --> AI_PROGRESS
+    PERMIT --> AI_PROGRESS
+    AI_PROGRESS --> REPORT2
+    REPORT2 -->|"writeReport()"| MILE_CON
+
+    %% Cross-module triggers
+    SOL_CON -->|"RescueFundingInitiated"| CCIP_TRANSFER
+    MILE_CON -->|"MilestoneVerified"| TRANCHE
+    CCIP_TRANSFER -->|"CCIP"| FUND_POLY
+    TRANCHE --> FUND_CON
+
+    %% Creditor flow
+    VOTE --> WATERFALL
+    WATERFALL --> CRED_CON
+
+    %% External data
+    CHAINLINK_DF -.-> READ_CHAIN
+    COST_API -.-> FETCH_COST
+    FUND_API -.-> FETCH_FUND
+    SAT_API -.-> SAT_DATA
+    PERMIT_API -.-> PERMIT
+    CLAUDE_API -.-> AI_RISK
+    CLAUDE_API -.-> AI_PROGRESS
+
+    %% Frontend reads
+    SOL_CON --> DASH
+    MILE_CON --> DASH
+    FUND_CON --> INV_VIEW
+    CRED_CON --> CRED_VIEW
+
+    classDef trigger fill:#f59e0b,stroke:#d97706,color:#000
+    classDef workflow fill:#3b82f6,stroke:#2563eb,color:#fff
+    classDef contract fill:#10b981,stroke:#059669,color:#fff
+    classDef external fill:#8b5cf6,stroke:#7c3aed,color:#fff
+    classDef frontend fill:#ec4899,stroke:#db2777,color:#fff
+    classDef confidential fill:#ef4444,stroke:#dc2626,color:#fff
+
+    class CRON,HTTP_TRIG,EVENT_TRIG trigger
+    class FETCH_COST,READ_CHAIN,FETCH_FUND,AI_RISK,REPORT1,SAT_DATA,PERMIT,AI_PROGRESS,REPORT2,CCIP_TRANSFER,TRANCHE,VOTE,WATERFALL workflow
+    class COMPUTE,VOTE confidential
+    class SOL_CON,MILE_CON,FUND_CON,CRED_CON,FUND_POLY contract
+    class CHAINLINK_DF,COST_API,FUND_API,SAT_API,PERMIT_API,CLAUDE_API external
+    class DASH,INV_VIEW,CRED_VIEW frontend

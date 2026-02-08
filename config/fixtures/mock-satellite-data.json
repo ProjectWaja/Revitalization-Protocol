@@ -1,0 +1,46 @@
+[
+  {
+    "imageUrl": "https://earthexplorer.usgs.gov/scene/LC08_L2SP_040036_20260115",
+    "captureDate": 1736899200,
+    "resolution": 0.3,
+    "geoCoordinates": { "lat": 41.8781, "lon": -87.6298 },
+    "cloudCover": 5,
+    "sensor": "Landsat-8 OLI",
+    "bandCombination": "RGB-NIR",
+    "changeDetectionScore": 78,
+    "structuralFootprintPercent": 62
+  },
+  {
+    "imageUrl": "https://earthexplorer.usgs.gov/scene/LC08_L2SP_040036_20260122",
+    "captureDate": 1737504000,
+    "resolution": 0.3,
+    "geoCoordinates": { "lat": 41.8781, "lon": -87.6298 },
+    "cloudCover": 12,
+    "sensor": "Landsat-8 OLI",
+    "bandCombination": "RGB-NIR",
+    "changeDetectionScore": 82,
+    "structuralFootprintPercent": 67
+  },
+  {
+    "imageUrl": "https://earthexplorer.usgs.gov/scene/S2A_MSIL2A_20260128",
+    "captureDate": 1738022400,
+    "resolution": 0.1,
+    "geoCoordinates": { "lat": 41.8781, "lon": -87.6298 },
+    "cloudCover": 3,
+    "sensor": "Sentinel-2A MSI",
+    "bandCombination": "TCI",
+    "changeDetectionScore": 85,
+    "structuralFootprintPercent": 71
+  },
+  {
+    "imageUrl": "https://drone-capture.revitalization.local/site-001/flight-20260201",
+    "captureDate": 1738368000,
+    "resolution": 0.02,
+    "geoCoordinates": { "lat": 41.8783, "lon": -87.6296 },
+    "cloudCover": 0,
+    "sensor": "DJI Matrice 350 RTK",
+    "bandCombination": "RGB-Thermal",
+    "changeDetectionScore": 88,
+    "structuralFootprintPercent": 74
+  }
+]
