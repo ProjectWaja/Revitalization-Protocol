@@ -3,6 +3,10 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+interface ITokenizedFundingEngine_Tranche {
+    function releaseTranche(bytes32 projectId, uint8 milestoneId) external;
+}
+
 /**
  * @title MilestoneConsumer
  * @author Revitalization Protocol
@@ -52,8 +56,8 @@ contract MilestoneConsumer is Ownable {
     /// @notice Authorized CRE workflow DON address that can submit reports
     address public authorizedWorkflow;
 
-    /// @notice Funding engine contract address (wired in Week 2 for tranche release)
-    address public fundingEngine;
+    /// @notice Funding engine contract (typed interface for safe cross-module calls)
+    ITokenizedFundingEngine_Tranche public fundingEngine;
 
     /// @notice Project milestone configurations
     mapping(bytes32 => MilestoneConfig) public milestoneConfigs;
@@ -209,16 +213,10 @@ contract MilestoneConsumer is Ownable {
             emit MilestoneCompleted(projectId, milestoneId, timestamp);
 
             // If funding engine is configured, notify it for tranche release
-            if (fundingEngine != address(0)) {
-                // NOTE: Will be wired to TokenizedFundingEngine in Week 2
-                (bool success, ) = fundingEngine.call(
-                    abi.encodeWithSignature(
-                        "releaseTranche(bytes32,uint8)",
-                        projectId,
-                        milestoneId
-                    )
-                );
-                if (!success) {
+            if (address(fundingEngine) != address(0)) {
+                try fundingEngine.releaseTranche(projectId, milestoneId) {
+                    // success — no action needed
+                } catch {
                     emit MilestoneDisputed(
                         projectId,
                         milestoneId,
@@ -326,7 +324,7 @@ contract MilestoneConsumer is Ownable {
      * @notice Set the funding engine address (Week 2 — tranche release).
      */
     function setFundingEngine(address _engine) external onlyOwner {
-        fundingEngine = _engine;
+        fundingEngine = ITokenizedFundingEngine_Tranche(_engine);
     }
 
     /**

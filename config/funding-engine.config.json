@@ -1,0 +1,10 @@
+{
+  "schedule": "*/10 * * * *",
+  "projectId": "0x5265766974616c697a6174696f6e50726f746f636f6c00000000000000000001",
+  "evmChainSelectorName": "ethereum-sepolia",
+  "fundingEngineAddress": "0x96dbe5f3cf891a6a8da49e27568ae817c471d719",
+  "solvencyConsumerAddress": "0x4127a05f683d02ec7c691d295261f8298bfdb20d",
+  "milestoneConsumerAddress": "0x510046808d7f20e7e3cb0f23038461c99eb62da3",
+  "maxTrancheReleaseAmount": "10000000000000000000",
+  "minInvestorCount": 2
+}

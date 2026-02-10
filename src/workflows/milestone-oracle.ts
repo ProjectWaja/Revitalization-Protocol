@@ -4,8 +4,8 @@
  * ============================================================================
  *
  * CRE Workflow: Verifies physical construction progress via satellite/drone
- * imagery and permit data, scored by an AI agent, and writes milestone
- * verification reports onchain.
+ * imagery and permit data, with deterministic rule-based scoring, and writes
+ * milestone verification reports onchain.
  *
  * Architecture:
  *   Cron Trigger (weekly audit sweep)
@@ -13,23 +13,21 @@
  *     → Fetch permit status data (HTTPClient + consensus)
  *     → Read onchain milestone config (EVMClient)
  *     → Compute progress score [Confidential Compute placeholder]
- *     → Call AI progress assessment agent (runInNodeMode, identical consensus)
  *     → Generate signed report → Write onchain (EVMClient)
  *
  * Chainlink Services Used:
  *   - CRE Workflows (orchestration)
  *   - Data Feeds (satellite/permit data via proxy)
  *   - Confidential Compute (placeholder for sensitive imagery analysis)
- *   - Custom HTTP APIs (satellite data, permit API, AI agent)
+ *   - Custom HTTP APIs (satellite data, permit API)
  *
  * Target Hackathon Categories:
  *   - DeFi & Tokenization (milestone-gated funding release)
  *   - Risk & Compliance (construction progress verification)
- *   - CRE & AI (AI progress scoring inside CRE workflow)
  *   - Privacy (Confidential Compute for proprietary imagery)
  *
  * @author Willis — Revitalization Protocol Team
- * @version 0.1.0
+ * @version 0.2.0
  * @hackathon Chainlink Convergence 2026
  */
 
@@ -48,7 +46,6 @@ import {
   ok,
   text,
   type Runtime,
-  type NodeRuntime,
   type HTTPSendRequester,
   type CronPayload,
   type HandlerEntry,
@@ -83,7 +80,6 @@ const configSchema = z.object({
   // External API endpoints
   satelliteApiUrl: z.string().describe('URL for satellite/drone imagery metadata API'),
   permitApiUrl: z.string().describe('URL for city permit status API'),
-  aiProgressAgentUrl: z.string().describe('URL for AI progress assessment agent (Claude API)'),
 
   // Thresholds
   approvalThreshold: z.number().describe('Min composite score to auto-approve milestone (0-100)'),
@@ -121,14 +117,6 @@ interface ProgressComponents {
   permitCompliance: number        // 0-100
   imageVerification: number       // 0-100
   overallProgress: number         // Weighted composite (0-100)
-}
-
-interface AIProgressResult {
-  progressNarrative: string
-  verifiedPercentage: number
-  concerns: string[]
-  recommendation: string
-  approved: boolean
 }
 
 // =============================================================================
@@ -253,55 +241,7 @@ const fetchPermitData = (
 }
 
 // =============================================================================
-// Step 3: AI Progress Assessment (Node Mode — identical consensus on JSON)
-// =============================================================================
-
-/**
- * Build a deterministic, structured prompt for the AI progress assessment agent.
- */
-function buildProgressPrompt(data: {
-  components: ProgressComponents
-  satelliteData: SatelliteData
-  permitData: PermitData
-  milestoneId: number
-  totalMilestones: number
-}): string {
-  return `You are a construction progress verification analyst for the Revitalization Protocol.
-Analyze the following milestone verification data and respond ONLY with a JSON object (no markdown, no explanation).
-
-MILESTONE: ${data.milestoneId + 1} of ${data.totalMilestones}
-
-PROGRESS SCORES:
-- Structural Progress: ${data.components.structuralProgress}/100
-- Permit Compliance: ${data.components.permitCompliance}/100
-- Image Verification: ${data.components.imageVerification}/100
-- Overall Progress: ${data.components.overallProgress}/100
-
-SATELLITE/DRONE DATA:
-- Change Detection Score: ${data.satelliteData.changeDetectionScore}/100
-- Structural Footprint: ${data.satelliteData.structuralFootprintPercent}%
-- Cloud Cover: ${data.satelliteData.cloudCover}%
-- Image Resolution: ${data.satelliteData.resolution}m/px
-
-PERMIT STATUS:
-- Total Permits: ${data.permitData.totalPermits}
-- Approved: ${data.permitData.approvedPermits}
-- Pending: ${data.permitData.pendingPermits}
-- Expired: ${data.permitData.expiredPermits}
-- Compliance Rate: ${data.permitData.complianceRate}%
-
-Respond with exactly this JSON structure:
-{
-  "progressNarrative": "<2-3 sentence progress summary>",
-  "verifiedPercentage": <0-100 integer>,
-  "concerns": ["<concern 1>", "<concern 2>"],
-  "recommendation": "<single actionable recommendation>",
-  "approved": <true if overall progress >= 70 and no critical concerns, false otherwise>
-}`
-}
-
-// =============================================================================
-// Step 4: Progress Score Computation (Confidential Compute Placeholder)
+// Step 3: Progress Score Computation (Confidential Compute Placeholder)
 // =============================================================================
 
 /**
@@ -518,97 +458,33 @@ const onCronTrigger = (runtime: Runtime<Config>, _payload: CronPayload): string 
   runtime.log(`[RVP] Progress: structural=${progress.structuralProgress}, permit=${progress.permitCompliance}, image=${progress.imageVerification}, overall=${progress.overallProgress}`)
 
   // -------------------------------------------------------------------------
-  // Step 5: AI Progress Assessment (Node Mode — identical consensus on JSON)
+  // Step 5: Rule-based approval decision + status summary
   // -------------------------------------------------------------------------
-  runtime.log('[RVP] Step 5: Calling AI progress assessment agent...')
+  runtime.log('[RVP] Step 5: Evaluating approval (rule-based)...')
 
-  const aiApiKey = runtime.getSecret('ANTHROPIC_API_KEY').result()
+  const shouldApprove =
+    progress.overallProgress >= config.approvalThreshold &&
+    permitData.complianceRate === 100
 
-  const aiResult = runtime
-    .runInNodeMode(
-      (nodeRuntime: NodeRuntime<Config>): AIProgressResult => {
-        const nodeHttp = new HTTPClient()
-        const resp = nodeHttp
-          .sendRequest(nodeRuntime, {
-            url: config.aiProgressAgentUrl,
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': aiApiKey,
-              'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 500,
-              temperature: 0,
-              messages: [
-                {
-                  role: 'user',
-                  content: buildProgressPrompt({
-                    components: progress,
-                    satelliteData,
-                    permitData,
-                    milestoneId: config.milestoneId,
-                    totalMilestones: milestoneConfig.totalMilestones,
-                  }),
-                },
-              ],
-            }),
-          })
-          .result()
+  const statusSummary = progress.overallProgress >= 95
+    ? 'Milestone fully verified: strong structural progress, high site activity, all permits approved.'
+    : progress.overallProgress >= 80
+    ? 'Milestone nearing completion: good structural and image progress, minor permit items pending.'
+    : progress.overallProgress >= 50
+    ? 'Moderate progress detected: structural work underway, permits partially in place.'
+    : 'Early stage progress: limited structural changes and site activity observed.'
 
-        if (!ok(resp)) {
-          // Graceful degradation: rule-based fallback
-          return {
-            progressNarrative: 'AI unavailable — rule-based fallback active.',
-            verifiedPercentage: progress.overallProgress,
-            concerns: ['AI agent unreachable'],
-            recommendation: 'Manual review recommended.',
-            approved: progress.overallProgress >= config.approvalThreshold,
-          }
-        }
-
-        const body = text(resp)
-        const parsed = JSON.parse(body)
-        const content = parsed.content?.[0]?.text ?? '{}'
-
-        // Strip any markdown code fences the model might emit
-        const cleaned = content.replace(/```json\s*|```/g, '').trim()
-        const result = JSON.parse(cleaned)
-
-        return {
-          progressNarrative: String(result.progressNarrative ?? ''),
-          verifiedPercentage: Number(result.verifiedPercentage ?? 0),
-          concerns: Array.isArray(result.concerns) ? result.concerns.slice(0, 5) : [],
-          recommendation: String(result.recommendation ?? ''),
-          approved: Boolean(result.approved ?? false),
-        }
-      },
-      ConsensusAggregationByFields<AIProgressResult>({
-        progressNarrative: identical,
-        verifiedPercentage: identical,
-        concerns: identical,
-        recommendation: identical,
-        approved: identical,
-      }),
-    )()
-    .result()
-
-  runtime.log(`[RVP] AI Assessment: approved=${aiResult.approved}, verified=${aiResult.verifiedPercentage}%, narrative="${aiResult.progressNarrative.substring(0, 80)}..."`)
+  runtime.log(`[RVP] Decision: approved=${shouldApprove}, progress=${progress.overallProgress}%, status="${statusSummary.substring(0, 60)}..."`)
 
   // -------------------------------------------------------------------------
   // Step 6: Generate signed report and write onchain
   // -------------------------------------------------------------------------
   runtime.log('[RVP] Step 6: Writing milestone report onchain...')
 
-  const shouldApprove =
-    aiResult.approved &&
-    progress.overallProgress >= config.approvalThreshold
-
   const reportBytes = encodeMilestoneReport(
     config.projectId,
     config.milestoneId,
-    aiResult.verifiedPercentage,
+    progress.overallProgress,
     progress.overallProgress,
     shouldApprove,
     timestamp,
@@ -632,16 +508,17 @@ const onCronTrigger = (runtime: Runtime<Config>, _payload: CronPayload): string 
     .result()
 
   runtime.log(`[RVP] Milestone report written onchain. TX: ${writeResult.transactionHash}`)
-  runtime.log(`[RVP] Progress: ${aiResult.verifiedPercentage}% | Score: ${progress.overallProgress}/100 | Approved: ${shouldApprove}`)
+  runtime.log(`[RVP] Progress: ${progress.overallProgress}% | Approved: ${shouldApprove}`)
 
   // Return summary for CRE execution logs
   return JSON.stringify({
     status: 'success',
     projectId: config.projectId,
     milestoneId: config.milestoneId,
-    verifiedPercentage: aiResult.verifiedPercentage,
+    progressPercentage: progress.overallProgress,
     verificationScore: progress.overallProgress,
     approved: shouldApprove,
+    statusSummary,
     timestamp,
   })
 }

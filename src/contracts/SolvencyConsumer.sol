@@ -3,6 +3,10 @@ pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+interface ITokenizedFundingEngine_Rescue {
+    function initiateRescueFunding(bytes32 projectId, uint8 solvencyScore) external;
+}
+
 /**
  * @title SolvencyConsumer
  * @author Revitalization Protocol
@@ -58,8 +62,8 @@ contract SolvencyConsumer is Ownable {
     /// @notice Authorized CRE workflow DON address that can submit reports
     address public authorizedWorkflow;
 
-    /// @notice Rescue funding contract address (set after Module 2 is built)
-    address public rescueFundingEngine;
+    /// @notice Rescue funding contract (typed interface for safe cross-module calls)
+    ITokenizedFundingEngine_Rescue public rescueFundingEngine;
 
     /// @notice Project financial parameters (set by admin, read by CRE workflow)
     mapping(bytes32 => ProjectFinancials) public projectFinancials;
@@ -198,18 +202,11 @@ contract SolvencyConsumer is Ownable {
         if (triggerRescue || overallScore < rescueThreshold) {
             emit RescueFundingInitiated(projectId, overallScore, timestamp);
 
-            // If rescue funding engine is configured, call it
-            if (rescueFundingEngine != address(0)) {
-                // NOTE: Will be wired to TokenizedFundingEngine in Week 2
-                (bool success, ) = rescueFundingEngine.call(
-                    abi.encodeWithSignature(
-                        "initiateRescueFunding(bytes32,uint8)",
-                        projectId,
-                        overallScore
-                    )
-                );
-                // Don't revert on rescue failure — log event regardless
-                if (!success) {
+            // If rescue funding engine is configured, call it via typed interface
+            if (address(rescueFundingEngine) != address(0)) {
+                try rescueFundingEngine.initiateRescueFunding(projectId, overallScore) {
+                    // success — no action needed
+                } catch {
                     emit RiskAlertTriggered(
                         projectId,
                         overallScore,
@@ -348,7 +345,7 @@ contract SolvencyConsumer is Ownable {
      * @notice Set the rescue funding engine address (Module 2).
      */
     function setRescueFundingEngine(address _engine) external onlyOwner {
-        rescueFundingEngine = _engine;
+        rescueFundingEngine = ITokenizedFundingEngine_Rescue(_engine);
     }
 
     /**

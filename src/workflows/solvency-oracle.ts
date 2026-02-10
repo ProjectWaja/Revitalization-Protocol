@@ -90,6 +90,9 @@ const configSchema = z.object({
   // Thresholds
   rescueTriggerThreshold: z.number().describe('Score below which rescue funding is triggered (0-100)'),
   alertThreshold: z.number().describe('Score below which alerts are emitted (0-100)'),
+
+  // Confidential Compute (optional)
+  confidentialComputeAddress: z.string().optional().describe('Address of ConfidentialSolvencyCompute.sol (optional)'),
 })
 
 type Config = z.infer<typeof configSchema>
@@ -162,6 +165,40 @@ const SOLVENCY_CONSUMER_ABI = [
     stateMutability: 'nonpayable',
     inputs: [{ name: 'report', type: 'bytes' }],
     outputs: [],
+  },
+] as const
+
+// =============================================================================
+// ABI Definitions for ConfidentialSolvencyCompute.sol
+// =============================================================================
+
+const CONFIDENTIAL_COMPUTE_ABI = [
+  {
+    name: 'computeSolvencyScore',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'projectId', type: 'bytes32' },
+      { name: 'financialHealth', type: 'uint8' },
+      { name: 'costExposure', type: 'uint8' },
+      { name: 'fundingMomentum', type: 'uint8' },
+      { name: 'runwayAdequacy', type: 'uint8' },
+      { name: 'nonce', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  {
+    name: 'getLatestResult',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'projectId', type: 'bytes32' }],
+    outputs: [
+      { name: 'score', type: 'uint8' },
+      { name: 'riskLevel', type: 'uint8' },
+      { name: 'attestationHash', type: 'bytes32' },
+      { name: 'enclaveVerified', type: 'bool' },
+      { name: 'timestamp', type: 'uint64' },
+    ],
   },
 ] as const
 
@@ -595,18 +632,50 @@ const onCronTrigger = (runtime: Runtime<Config>, _payload: CronPayload): string 
   runtime.log(`[RVP] Funding: pledged=$${fundingMetrics.totalPledged}, investors=${fundingMetrics.investorCount}`)
 
   // -------------------------------------------------------------------------
-  // Step 4: Compute solvency score [CONFIDENTIAL COMPUTE PLACEHOLDER]
+  // Step 4: Compute solvency score + Confidential Compute attestation
   // -------------------------------------------------------------------------
-  runtime.log('[RVP] Step 4: Computing solvency score [CC_PLACEHOLDER]...')
+  runtime.log('[RVP] Step 4: Computing solvency score...')
 
-  // NOTE: When Confidential Compute SDK is available, wrap this call:
-  //   const solvency = ccRuntime.execute(
-  //     () => computeSolvency(financials, costIndices, fundingMetrics),
-  //     { attestation: true, enclave: 'sgx' }
-  //   )
   const solvency = computeSolvency(financials, costIndices, fundingMetrics)
 
   runtime.log(`[RVP] Solvency: score=${solvency.overallScore}/100, risk=${['LOW','MEDIUM','HIGH','CRITICAL'][solvency.riskLevel]}`)
+
+  // If ConfidentialSolvencyCompute is configured, read the attestation hash
+  if (config.confidentialComputeAddress) {
+    runtime.log('[RVP] Step 4b: Reading CC attestation hash...')
+
+    const ccCallData = encodeFunctionData({
+      abi: CONFIDENTIAL_COMPUTE_ABI,
+      functionName: 'getLatestResult',
+      args: [config.projectId as `0x${string}`],
+    })
+
+    try {
+      const ccResult = evmClient
+        .callContract(runtime, {
+          call: encodeCallMsg({
+            from: zeroAddress,
+            to: config.confidentialComputeAddress as Address,
+            data: ccCallData,
+          }),
+          blockNumber: LAST_FINALIZED_BLOCK_NUMBER,
+        })
+        .result()
+
+      const ccDecoded = decodeFunctionResult({
+        abi: CONFIDENTIAL_COMPUTE_ABI,
+        functionName: 'getLatestResult',
+        data: ccResult.data as `0x${string}`,
+      }) as [number, number, string, boolean, bigint]
+
+      const ccAttestationHash = ccDecoded[2]
+      const ccEnclaveVerified = ccDecoded[3]
+
+      runtime.log(`[RVP] CC attestation: hash=${ccAttestationHash}, enclaveVerified=${ccEnclaveVerified}`)
+    } catch {
+      runtime.log('[RVP] CC attestation read failed — continuing without CC verification')
+    }
+  }
 
   // -------------------------------------------------------------------------
   // Step 5: AI Risk Agent call (Node Mode — structured JSON, identical consensus)

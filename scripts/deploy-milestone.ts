@@ -1,8 +1,8 @@
 /**
- * Deploy SolvencyConsumer.sol to Ethereum Sepolia
+ * Deploy MilestoneConsumer.sol to Ethereum Sepolia
  *
  * Usage:
- *   bun run scripts/deploy-solvency.ts
+ *   bun run scripts/deploy-milestone.ts
  *
  * Required environment / secrets:
  *   DEPLOYER_PRIVATE_KEY  — Private key of the deploying wallet
@@ -33,7 +33,6 @@ interface DeployConfig {
 }
 
 function loadConfig(): DeployConfig {
-  // Try secrets file first, then fall back to env vars
   let secrets: Record<string, string> = {}
 
   try {
@@ -75,34 +74,22 @@ function loadConfig(): DeployConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Contract ABI & Bytecode
+// Contract ABI
 // ---------------------------------------------------------------------------
 
-// NOTE: In a full setup you'd compile with solc/forge and import the artifact.
-// For the hackathon, we compile separately and paste the bytecode here,
-// or use forge to compile and read the artifact.
-//
-// To compile:
-//   forge build --contracts src/contracts/SolvencyConsumer.sol
-//   Then copy the bytecode from out/SolvencyConsumer.sol/SolvencyConsumer.json
-
-const SOLVENCY_CONSUMER_ABI = [
+const MILESTONE_CONSUMER_ABI = [
   {
     type: 'constructor',
     inputs: [{ name: '_authorizedWorkflow', type: 'address' }],
     stateMutability: 'nonpayable',
   },
   {
-    name: 'registerProject',
+    name: 'registerProjectMilestones',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [
       { name: 'projectId', type: 'bytes32' },
-      { name: 'totalBudget', type: 'uint256' },
-      { name: 'capitalDeployed', type: 'uint256' },
-      { name: 'capitalRemaining', type: 'uint256' },
-      { name: 'fundingVelocity', type: 'uint256' },
-      { name: 'burnRate', type: 'uint256' },
+      { name: 'totalMilestones', type: 'uint8' },
     ],
     outputs: [],
   },
@@ -128,7 +115,7 @@ const SOLVENCY_CONSUMER_ABI = [
 
 async function main() {
   console.log('='.repeat(60))
-  console.log('Revitalization Protocol — SolvencyConsumer Deployment')
+  console.log('Revitalization Protocol — MilestoneConsumer Deployment')
   console.log('='.repeat(60))
 
   const config = loadConfig()
@@ -166,7 +153,6 @@ async function main() {
   console.log(`Workflow:  ${authorizedWorkflow}`)
 
   // Load compiled bytecode
-  // Try forge artifact first, then fall back to a local bytecode file
   let bytecode: Hex
 
   try {
@@ -174,37 +160,25 @@ async function main() {
       import.meta.dir,
       '..',
       'out',
-      'SolvencyConsumer.sol',
-      'SolvencyConsumer.json',
+      'MilestoneConsumer.sol',
+      'MilestoneConsumer.json',
     )
     const artifact = JSON.parse(readFileSync(artifactPath, 'utf-8'))
     bytecode = artifact.bytecode.object as Hex
     console.log('\nLoaded bytecode from forge artifact')
   } catch {
-    try {
-      const bytecodePath = join(
-        import.meta.dir,
-        '..',
-        'config',
-        'SolvencyConsumer.bytecode.hex',
-      )
-      bytecode = `0x${readFileSync(bytecodePath, 'utf-8').trim()}` as Hex
-      console.log('\nLoaded bytecode from config/SolvencyConsumer.bytecode.hex')
-    } catch {
-      console.error(
-        '\nNo compiled bytecode found. Compile the contract first:\n' +
-        '  forge build --contracts src/contracts/SolvencyConsumer.sol\n' +
-        'Or place raw bytecode in config/SolvencyConsumer.bytecode.hex\n',
-      )
-      process.exit(1)
-    }
+    console.error(
+      '\nNo compiled bytecode found. Compile the contract first:\n' +
+      '  forge build\n',
+    )
+    process.exit(1)
   }
 
   // Deploy
-  console.log('\nDeploying SolvencyConsumer...')
+  console.log('\nDeploying MilestoneConsumer...')
 
   const hash = await walletClient.deployContract({
-    abi: SOLVENCY_CONSUMER_ABI,
+    abi: MILESTONE_CONSUMER_ABI,
     bytecode,
     args: [authorizedWorkflow],
   })
@@ -220,24 +194,17 @@ async function main() {
   console.log(`Block:     ${receipt.blockNumber}`)
   console.log(`Gas used:  ${receipt.gasUsed}`)
 
-  // Register the demo project
-  console.log('\nRegistering demo project...')
+  // Register the demo project with 4 milestones
+  console.log('\nRegistering demo project milestones...')
 
   const projectId =
     '0x5265766974616c697a6174696f6e50726f746f636f6c00000000000000000001' as Hex
 
   const regHash = await walletClient.writeContract({
     address: contractAddress,
-    abi: SOLVENCY_CONSUMER_ABI,
-    functionName: 'registerProject',
-    args: [
-      projectId,
-      50_000_000n * 1_000_000n,   // $50M total budget (USD * 1e6)
-      15_000_000n * 1_000_000n,   // $15M deployed
-      35_000_000n * 1_000_000n,   // $35M remaining
-      2_000_000n * 1_000_000n,    // $2M/month funding velocity
-      1_500_000n * 1_000_000n,    // $1.5M/month burn rate
-    ],
+    abi: MILESTONE_CONSUMER_ABI,
+    functionName: 'registerProjectMilestones',
+    args: [projectId, 4],
   })
 
   const regReceipt = await publicClient.waitForTransactionReceipt({
@@ -255,39 +222,40 @@ async function main() {
     deployTxHash: hash,
     blockNumber: Number(receipt.blockNumber),
     demoProjectId: projectId,
+    totalMilestones: 4,
     registerTxHash: regHash,
     deployedAt: new Date().toISOString(),
   }
 
   const deploymentsDir = join(import.meta.dir, '..', 'deployments')
   mkdirSync(deploymentsDir, { recursive: true })
-  const deploymentPath = join(deploymentsDir, 'sepolia-solvency.json')
+  const deploymentPath = join(deploymentsDir, 'sepolia-milestone.json')
   writeFileSync(deploymentPath, JSON.stringify(deployment, null, 2))
 
-  console.log(`\nDeployment saved to: deployments/sepolia-solvency.json`)
+  console.log(`\nDeployment saved to: deployments/sepolia-milestone.json`)
 
   // Update the workflow config with the deployed address
   const configPath = join(
     import.meta.dir,
     '..',
     'config',
-    'solvency-oracle.config.json',
+    'milestone-oracle.config.json',
   )
   const workflowConfig = JSON.parse(readFileSync(configPath, 'utf-8'))
-  workflowConfig.solvencyConsumerAddress = contractAddress
+  workflowConfig.milestoneConsumerAddress = contractAddress
   writeFileSync(configPath, JSON.stringify(workflowConfig, null, 2))
 
-  console.log(`Updated config/solvency-oracle.config.json with contract address`)
+  console.log(`Updated config/milestone-oracle.config.json with contract address`)
 
   console.log('\n' + '='.repeat(60))
   console.log('Deployment complete!')
   console.log('='.repeat(60))
   console.log(`
 Next steps:
-  1. Compile the contract:  forge build --contracts src/contracts/SolvencyConsumer.sol
+  1. Compile the contract:  forge build
   2. Fund the workflow:     Send LINK to the DON subscription
-  3. Deploy the workflow:   bun run deploy:workflow
-  4. Simulate locally:      bun run simulate
+  3. Deploy the workflow:   bun run deploy:milestone
+  4. Simulate locally:      bun run simulate:milestone
   `)
 }
 

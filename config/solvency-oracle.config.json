@@ -1,8 +1,8 @@
 {
   "schedule": "*/5 * * * *",
-  "projectId": "0x5265766974616c697a6174696f6e50726f746f636f6c000000000000000001",
+  "projectId": "0x5265766974616c697a6174696f6e50726f746f636f6c00000000000000000001",
   "evmChainSelectorName": "ethereum-sepolia",
-  "solvencyConsumerAddress": "0x0000000000000000000000000000000000000000",
+  "solvencyConsumerAddress": "0x4127a05f683d02ec7c691d295261f8298bfdb20d",
   "costIndexApiUrl": "https://your-mock-api.example.com/api/v1/cost-indices",
   "fundingApiUrl": "https://your-mock-api.example.com/api/v1/funding-metrics",
   "aiRiskAgentUrl": "https://api.anthropic.com/v1/messages",
