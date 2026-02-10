@@ -1,9 +1,10 @@
 # Revitalization Protocol
 
-**Real-time solvency monitoring and tokenized rescue funding for stalled infrastructure projects.**
+**Real-time solvency monitoring + tokenized rescue funding for stalled infrastructure projects**
 
-[![Chainlink Convergence 2026](https://img.shields.io/badge/Hackathon-Chainlink_Convergence_2026-375BD2)](https://chain.link/hackathon)
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636)](https://soliditylang.org)
+[![Chainlink](https://img.shields.io/badge/Built%20with-Chainlink-00A6FF?style=flat&logo=chainlink)](https://chain.link)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?style=flat&logo=solidity)](https://soliditylang.org)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat&logo=next.js)](https://nextjs.org)
 [![Tests](https://img.shields.io/badge/Tests-87_passing-brightgreen)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
@@ -11,82 +12,90 @@
 
 ## Problem
 
-Large infrastructure projects — skyscrapers, bridges, transit systems, renewable energy facilities — routinely stall due to funding shortages, cost overruns, or bankruptcy. When a $1B project stops at 60% completion, capital is trapped, communities lose economic opportunity, and investors have no recourse. Examples include California High-Speed Rail ($100B+ overruns) and LA's Oceanwide Plaza (abandoned at 80% completion).
+High-value infrastructure projects (skyscrapers, bridges, transit, renewables) frequently stall due to:
 
-There is no automated system to detect failing projects early, trigger emergency funding, or verify that rescue capital is being spent on actual construction progress.
+- Funding shortages & cost overruns
+- Lack of early financial health detection
+- No automated rescue mechanisms
+- Trapped capital, urban blight & lost community value
+
+Real-world examples:
+- **California High-Speed Rail** — $100B+ overruns, decades delayed
+- **Oceanwide Plaza (LA)** — $1B+ skyscraper abandoned mid-construction
+
+There is currently **no trustless, automated system** to detect distress early, trigger emergency funding, and verify that rescue capital is actually used for progress.
 
 ## Solution
 
-Revitalization Protocol uses **7 Chainlink services** to build an end-to-end infrastructure rescue system:
+Revitalization Protocol is a Chainlink-powered oracle platform that:
 
-1. **Detect** — Real-time solvency monitoring with AI-powered risk scoring inside CRE workflows
-2. **Fund** — Tokenized rescue funding via ERC-1155 positions with milestone-gated tranche release
-3. **Verify** — Satellite/drone-verified construction progress with deterministic scoring
-4. **Protect** — Confidential Compute for sensitive financial data and investor privacy
-5. **Bridge** — Cross-chain funding via CCIP (Sepolia to Polygon Amoy)
+1. **Detects** financial distress in real time using AI-enhanced solvency scoring
+2. **Triggers** tokenized rescue funding rounds automatically
+3. **Verifies** construction progress via satellite/drone data
+4. **Protects** sensitive data with Confidential Compute
+5. **Enables** cross-chain capital movement via CCIP
 
-## Chainlink Services Used
+## Chainlink Services Used (7 total)
 
-| Service | Where | Purpose |
-|---------|-------|---------|
-| **CRE Workflows** | All 3 workflows | Orchestration layer — triggers, consensus, signed reports |
-| **AI Agents (Claude)** | Solvency Oracle | Risk narrative + rescue trigger decision inside CRE |
-| **Data Feeds** | Solvency Oracle | Commodity cost indices via proxy (steel, concrete, labor) |
+| Service | Used In | Purpose |
+|---------|---------|---------|
+| **CRE Workflows** | All 3 modules | Orchestration, cron triggers, consensus, signed reports |
+| **AI Agents (Claude)** | Solvency Oracle | Risk narrative & rescue trigger decision (structured JSON, temp=0) |
+| **Data Feeds** | Solvency Oracle | Commodity cost indices (steel, concrete, labor) via HTTP proxy |
 | **CCIP** | Funding Engine | Cross-chain token transfers (Sepolia <-> Polygon Amoy) |
-| **Automation** | Funding Engine, Reserve Verifier | Expire stale rounds, periodic reserve checks |
-| **Proof of Reserves** | Reserve Verifier | Verify project reserves match claimed deposits |
-| **Confidential Compute** | Solvency Compute | Privacy-preserving scoring with attestation hashes |
+| **Automation** | Funding Engine, Reserve Verifier | Auto-expire rounds, periodic reserve re-verification |
+| **Proof of Reserves** | ReserveVerifier.sol | On-chain verification of project reserves |
+| **Confidential Compute** | Solvency Compute | Privacy-preserving scoring + attestation hashes |
 
-## Architecture
+## Architecture Overview
 
 Six smart contracts connected by typed cross-module hooks:
 
 ```
 Solvency Oracle (CRE + AI)          Milestone Oracle (CRE)
-       |                                    |
-       v                                    v
-SolvencyConsumer.sol ----+      MilestoneConsumer.sol ---+
-  (rescue trigger)       |       (tranche trigger)       |
-                         v                               v
-                  TokenizedFundingEngine.sol (ERC-1155)
-                         |
-                         v
-                  ReserveVerifier.sol (Proof of Reserves)
-                         |
-                         v
-              ConfidentialSolvencyCompute.sol (CC attestations)
+       │                                    │
+       ▼                                    ▼
+SolvencyConsumer.sol ────┬──── MilestoneConsumer.sol
+  (rescue trigger)       │      (tranche trigger)
+                         ▼
+              TokenizedFundingEngine.sol (ERC-1155)
+                         │
+                         ▼
+              ReserveVerifier.sol (PoR + Automation)
+                         │
+                         ▼
+        ConfidentialSolvencyCompute.sol (attestations)
 ```
 
-### Deployed Contracts (Ethereum Sepolia)
+Cross-module hooks are wired with typed interfaces and try/catch safety.
+
+## Deployed Contracts (Sepolia)
 
 | Contract | Address |
 |----------|---------|
-| SolvencyConsumer | [`0x4127a05f683d02ec7c691d295261f8298bfdb20d`](https://sepolia.etherscan.io/address/0x4127a05f683d02ec7c691d295261f8298bfdb20d) |
-| MilestoneConsumer | [`0x510046808d7f20e7e3cb0f23038461c99eb62da3`](https://sepolia.etherscan.io/address/0x510046808d7f20e7e3cb0f23038461c99eb62da3) |
-| TokenizedFundingEngine | [`0x96dbe5f3cf891a6a8da49e27568ae817c471d719`](https://sepolia.etherscan.io/address/0x96dbe5f3cf891a6a8da49e27568ae817c471d719) |
-| ReserveVerifier | [`0x59b214722d632191921551ce59431acf65c05f0d`](https://sepolia.etherscan.io/address/0x59b214722d632191921551ce59431acf65c05f0d) |
-
-Cross-module hooks are wired: SolvencyConsumer triggers rescue funding, MilestoneConsumer triggers tranche release, both via typed interfaces with try/catch.
+| SolvencyConsumer | [`0x4127...b20d`](https://sepolia.etherscan.io/address/0x4127a05f683d02ec7c691d295261f8298bfdb20d) |
+| MilestoneConsumer | [`0x5100...2da3`](https://sepolia.etherscan.io/address/0x510046808d7f20e7e3cb0f23038461c99eb62da3) |
+| TokenizedFundingEngine | [`0x96db...d719`](https://sepolia.etherscan.io/address/0x96dbe5f3cf891a6a8da49e27568ae817c471d719) |
+| ReserveVerifier | [`0x59b2...f0d`](https://sepolia.etherscan.io/address/0x59b214722d632191921551ce59431acf65c05f0d) |
 
 ## Tech Stack
 
-- **Smart Contracts**: Solidity 0.8.24 via Foundry, OpenZeppelin v5.5.0
-- **Workflows**: Chainlink CRE SDK (TypeScript), compiled to WASM
+- **Smart Contracts**: Solidity 0.8.24 (Foundry), OpenZeppelin v5.5.0
+- **Oracles**: Chainlink CRE SDK (TypeScript, compiled to WASM)
 - **Runtime**: Bun
-- **Frontend**: Next.js 15, Tailwind CSS 4
-- **Libraries**: viem, zod
-- **AI**: Anthropic Claude (Solvency Oracle only — hero feature)
-- **Testnets**: Ethereum Sepolia, Polygon Amoy
+- **Frontend**: Next.js 15 + Tailwind CSS 4 + viem
+- **AI**: Anthropic Claude (Solvency Oracle only)
+- **Testnets**: Ethereum Sepolia + Polygon Amoy (CCIP)
 
-## Setup & Deployment
+## Getting Started
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) runtime
-- [Foundry](https://getfoundry.sh) (forge, cast)
-- Sepolia ETH ([faucet](https://faucets.chain.link))
+- [Bun](https://bun.sh) >= 1.0
+- [Foundry](https://getfoundry.sh) (latest)
+- Sepolia testnet wallet with ETH ([faucet](https://faucets.chain.link))
 
-### Install
+### Installation
 
 ```bash
 git clone https://github.com/ProjectWaja/Revitalization-Protocol.git
@@ -95,14 +104,14 @@ bun install
 forge install
 ```
 
-### Configure
+### Configuration
 
 ```bash
 cp .env.example .env
-# Edit .env with your keys:
-#   DEPLOYER_PRIVATE_KEY  — Sepolia wallet private key
-#   SEPOLIA_RPC_URL       — Alchemy or Infura Sepolia endpoint
-#   ANTHROPIC_API_KEY     — For Solvency Oracle AI
+# Fill in:
+#   DEPLOYER_PRIVATE_KEY  = 0x... (Sepolia deployer key)
+#   SEPOLIA_RPC_URL       = https://eth-sepolia.g.alchemy.com/v2/...
+#   ANTHROPIC_API_KEY     = sk-ant-api03-...
 ```
 
 ### Run Tests (87 passing)
@@ -113,79 +122,76 @@ forge test
 
 ### Deploy to Sepolia
 
-Contracts must be deployed in order (each script wires hooks to prior deployments):
-
 ```bash
-bun run scripts/deploy-solvency.ts
-bun run scripts/deploy-milestone.ts
-bun run scripts/deploy-funding.ts
-bun run scripts/deploy-reserve-verifier.ts
+# Deploy in order (each script wires previous addresses)
+bun run scripts/deploy-solvency.ts         # 1. SolvencyConsumer
+bun run scripts/deploy-milestone.ts        # 2. MilestoneConsumer
+bun run scripts/deploy-funding.ts          # 3. TokenizedFundingEngine
+bun run scripts/deploy-reserve-verifier.ts # 4. ReserveVerifier
 ```
 
-Deployment artifacts are saved to `deployments/` (gitignored).
+Artifacts saved to `deployments/` (gitignored).
 
-### Run Dashboard
+### Dashboard
 
 ```bash
-cd dashboard
-bun install
-bun dev
+cd dashboard && bun install && bun dev
+# Open http://localhost:3000
 ```
 
 ### Local Simulation
 
 ```bash
-# Start mock API server (port 3001)
+# Mock API server (required for CRE simulation)
 bun run scripts/mock-api-server.ts
 
-# Run end-to-end demo
+# End-to-end demo (solvency → rescue → milestone → tranche)
 bun run scripts/demo-simulation.ts
 ```
+
+## AI Implementation
+
+> **Hero feature** — only the Solvency Oracle uses Claude (inside CRE with `identical` consensus and `temp=0`).
+
+Every DON node runs the same prompt and produces the same structured JSON result — deterministic AI with on-chain consensus. The Milestone Oracle and Funding Engine are **purely rule-based** (no AI calls, no consensus risk) for maximum demo reliability.
+
+One powerful AI integration beats three fragile ones.
 
 ## Project Structure
 
 ```
 src/
-  contracts/              # 6 Solidity smart contracts
-    SolvencyConsumer.sol        Receives solvency reports from CRE
-    MilestoneConsumer.sol       Receives milestone verification reports
-    TokenizedFundingEngine.sol  ERC-1155 funding with tranches + automation
-    ReserveVerifier.sol         Proof of Reserves + automation
-    ConfidentialSolvencyCompute.sol  Privacy-preserving scoring
-    FundingBridgeReceiver.sol   CCIP cross-chain receiver stub
-  workflows/              # 3 CRE TypeScript workflows
-    solvency-oracle.ts         AI-powered risk monitoring (hero feature)
-    milestone-oracle.ts        Rule-based progress verification
-    funding-engine.ts          Rule-based funding health monitoring
-  lib/                    # Shared scoring libraries
-  types/                  # TypeScript type definitions
-test/                     # 87 Foundry tests (6 suites + integration)
-scripts/                  # Deploy scripts, mock API, demo simulation
-config/                   # Workflow configs, fixtures
-dashboard/                # Next.js 15 monitoring dashboard
-docs/                     # Architecture diagrams
+  contracts/                          # 6 Solidity smart contracts
+    SolvencyConsumer.sol              # Receives solvency reports from CRE
+    MilestoneConsumer.sol             # Receives milestone verification reports
+    TokenizedFundingEngine.sol        # ERC-1155 funding + tranches + automation
+    ReserveVerifier.sol               # Proof of Reserves + automation
+    ConfidentialSolvencyCompute.sol   # Privacy-preserving scoring
+    FundingBridgeReceiver.sol         # CCIP cross-chain receiver stub
+  workflows/                          # 3 CRE TypeScript workflows
+    solvency-oracle.ts               # AI-powered risk monitoring (hero feature)
+    milestone-oracle.ts              # Rule-based progress verification
+    funding-engine.ts                # Rule-based funding health monitoring
+  lib/                                # Shared scoring libraries
+  types/                              # TypeScript type definitions
+test/                                 # 87 Foundry tests (6 suites + integration)
+scripts/                              # Deploy scripts, mock API, demo
+config/                               # Workflow configs, fixtures
+dashboard/                            # Next.js 15 monitoring dashboard
 ```
-
-## AI Approach
-
-Only the **Solvency Oracle** uses AI (Claude) — this is the hero feature for the CRE & AI track. It runs inside CRE via `runInNodeMode` with identical consensus and structured JSON output at temperature=0.
-
-The Milestone Oracle and Funding Engine use **pure deterministic rule-based scoring** — no AI, no consensus risk, 100% demo-reliable. This gives us the best balance of narrative impact and demo stability.
-
-All three workflows have strong fallback paths if any external call fails.
 
 ## Hackathon Categories
 
-| Category | Prize | Our Integration |
-|----------|-------|-----------------|
-| **DeFi & Tokenization** | $20K | ERC-1155 funding positions, milestone-gated tranches, CCIP cross-chain |
-| **CRE & AI** | $17K | AI risk scoring inside CRE with consensus (Solvency Oracle) |
-| **Risk & Compliance** | $16K | Real-time solvency monitoring, Proof of Reserves, Automation |
-| **Privacy** | $16K | Confidential Compute for sensitive financials + attestations |
+| Category | Prize | Our Fit |
+|----------|-------|---------|
+| **DeFi & Tokenization** | $20K | ERC-1155 positions, milestone-gated tranches, CCIP bridging |
+| **CRE & AI** | $17K | AI risk scoring inside CRE (Solvency), consensus handling |
+| **Risk & Compliance** | $16K | Real-time solvency, Proof of Reserves, Automation, audit trails |
+| **Privacy** | $16K | Confidential Compute + attestation architecture |
 
 ## Team
 
-**Willis** — Product Manager & Full-Stack Developer
+**Willis** — Product, Full-Stack, Smart Contracts
 
 ## License
 
