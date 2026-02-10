@@ -1,5 +1,11 @@
 import type { SolvencyData } from '@/hooks/useContractData'
 
+function formatFinancial(value: number): string {
+  if (value >= 1e6) return `${(value / 1e6).toFixed(0)}M`
+  if (value >= 1e3) return `${(value / 1e3).toFixed(0)}K`
+  return value.toFixed(1)
+}
+
 const RISK_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const
 const RISK_COLORS = {
   LOW: 'text-green-400 bg-green-400/10',
@@ -52,9 +58,9 @@ export function SolvencyPanel({ data }: { data: SolvencyData }) {
           </div>
         </div>
         <div className="space-y-1 text-sm">
-          <div className="text-gray-400">Budget: <span className="text-white">${(d.financials.totalBudget / 1e6).toFixed(0)}M</span></div>
-          <div className="text-gray-400">Deployed: <span className="text-white">${(d.financials.capitalDeployed / 1e6).toFixed(1)}M</span></div>
-          <div className="text-gray-400">Remaining: <span className="text-white">${(d.financials.capitalRemaining / 1e6).toFixed(1)}M</span></div>
+          <div className="text-gray-400">Budget: <span className="text-white">${formatFinancial(d.financials.totalBudget)}</span></div>
+          <div className="text-gray-400">Deployed: <span className="text-white">${formatFinancial(d.financials.capitalDeployed)}</span></div>
+          <div className="text-gray-400">Remaining: <span className="text-white">${formatFinancial(d.financials.capitalRemaining)}</span></div>
           <div className="text-gray-400">Runway: <span className="text-white">{d.financials.burnRate > 0 ? (d.financials.capitalRemaining / d.financials.burnRate).toFixed(0) : '--'} months</span></div>
         </div>
       </div>

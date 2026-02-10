@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPublicClient, http, formatEther, type Address } from 'viem'
 import { foundry, sepolia } from 'viem/chains'
 import {
-  ADDRESSES,
+  ADDRESSES as DEFAULT_ADDRESSES,
   PROJECT_ID,
   SOLVENCY_ABI,
   MILESTONE_ABI,
@@ -15,6 +15,13 @@ import {
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+export interface ContractAddresses {
+  solvencyConsumer: Address
+  milestoneConsumer: Address
+  fundingEngine: Address
+  reserveVerifier: Address
+}
 
 export interface SolvencyData {
   overallScore: number
@@ -101,61 +108,29 @@ const MILESTONE_NAMES = [
 
 const DEMO_DATA: DashboardData = {
   solvency: {
-    overallScore: 72,
-    riskLevel: 1,
-    financialHealth: 80,
-    costExposure: 65,
-    fundingMomentum: 68,
-    runwayAdequacy: 85,
+    overallScore: 0,
+    riskLevel: 0,
+    financialHealth: 0,
+    costExposure: 0,
+    fundingMomentum: 0,
+    runwayAdequacy: 0,
     rescueTriggered: false,
-    timestamp: Math.floor(Date.now() / 1000) - 300,
+    timestamp: 0,
     financials: {
-      totalBudget: 50_000_000,
-      capitalDeployed: 18_500_000,
-      capitalRemaining: 31_500_000,
-      fundingVelocity: 2_100_000,
-      burnRate: 1_650_000,
+      totalBudget: 0,
+      capitalDeployed: 0,
+      capitalRemaining: 0,
+      fundingVelocity: 0,
+      burnRate: 0,
     },
   },
-  milestones: [
-    { id: 0, name: 'Foundation & Excavation', progress: 100, score: 92, approved: true, status: 'VERIFIED' },
-    { id: 1, name: 'Steel Framing & Structure', progress: 74, score: 85, approved: true, status: 'IN_PROGRESS' },
-    { id: 2, name: 'MEP & Interior Systems', progress: 20, score: 78, approved: false, status: 'IN_PROGRESS' },
-    { id: 3, name: 'Finishing & Commissioning', progress: 0, score: 0, approved: false, status: 'NOT_STARTED' },
-  ],
-  rounds: [
-    {
-      roundId: 1,
-      roundType: 'STANDARD',
-      status: 1,
-      targetAmount: 10,
-      totalDeposited: 10,
-      totalReleased: 2.5,
-      deadline: Math.floor(Date.now() / 1000) + 25 * 86400,
-      investorCount: 8,
-      tranches: [
-        { milestoneId: 0, basisPoints: 2500, released: true },
-        { milestoneId: 1, basisPoints: 2500, released: false },
-        { milestoneId: 2, basisPoints: 2500, released: false },
-        { milestoneId: 3, basisPoints: 2500, released: false },
-      ],
-    },
-  ],
+  milestones: MILESTONE_NAMES.map((name, i) => ({
+    id: i, name, progress: 0, score: 0, approved: false, status: 'NOT_STARTED',
+  })),
+  rounds: [],
   reserves: {
-    project: {
-      porReported: 48_500_000,
-      onchainBalance: 31.5,
-      claimed: 50_000_000,
-      status: 1,
-      reserveRatio: 9700,
-      timestamp: Math.floor(Date.now() / 1000) - 1800,
-    },
-    engine: {
-      contractBalance: 10,
-      reportedDeposits: 10,
-      status: 1,
-      timestamp: Math.floor(Date.now() / 1000) - 600,
-    },
+    project: { porReported: 0, onchainBalance: 0, claimed: 0, status: 0, reserveRatio: 0, timestamp: 0 },
+    engine: { contractBalance: 0, reportedDeposits: 0, status: 0, timestamp: 0 },
   },
   isLive: false,
   lastUpdated: Date.now(),
@@ -166,14 +141,24 @@ const DEMO_DATA: DashboardData = {
 // Hook
 // ---------------------------------------------------------------------------
 
-const POLL_INTERVAL = 10_000 // 10 seconds
+const POLL_INTERVAL = 5_000 // 5 seconds for demo responsiveness
 
-export function useContractData(): DashboardData {
+export function useContractData(overrideAddresses?: ContractAddresses | null) {
   const [data, setData] = useState<DashboardData>(DEMO_DATA)
+  const addressesRef = useRef<ContractAddresses>(DEFAULT_ADDRESSES)
+
+  // Update addresses when override changes
+  if (overrideAddresses) {
+    addressesRef.current = overrideAddresses
+  }
 
   const fetchData = useCallback(async () => {
-    const rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? process.env.NEXT_PUBLIC_RPC_URL
-    const isAnvil = rpcUrl?.includes('127.0.0.1') || rpcUrl?.includes('localhost')
+    const addrs = addressesRef.current
+    const isZero = addrs.solvencyConsumer === '0x0000000000000000000000000000000000000000'
+    if (isZero) return
+
+    const rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? process.env.NEXT_PUBLIC_RPC_URL ?? 'http://127.0.0.1:8545'
+    const isAnvil = rpcUrl.includes('127.0.0.1') || rpcUrl.includes('localhost')
     const chain = isAnvil ? foundry : sepolia
 
     const client = createPublicClient({ chain, transport: http(rpcUrl) })
@@ -182,21 +167,21 @@ export function useContractData(): DashboardData {
       // Fetch all data in parallel
       const [solvencyResult, financialsResult, roundsResult] = await Promise.all([
         client.readContract({
-          address: ADDRESSES.solvencyConsumer,
+          address: addrs.solvencyConsumer,
           abi: SOLVENCY_ABI,
           functionName: 'getLatestSolvency',
           args: [PROJECT_ID],
         }).catch(() => null),
 
         client.readContract({
-          address: ADDRESSES.solvencyConsumer,
+          address: addrs.solvencyConsumer,
           abi: SOLVENCY_ABI,
           functionName: 'getProjectFinancials',
           args: [PROJECT_ID],
         }).catch(() => null),
 
         client.readContract({
-          address: ADDRESSES.fundingEngine,
+          address: addrs.fundingEngine,
           abi: FUNDING_ABI,
           functionName: 'getProjectRounds',
           args: [PROJECT_ID],
@@ -212,7 +197,7 @@ export function useContractData(): DashboardData {
       const milestonePromises = [0, 1, 2, 3].map((id) =>
         client
           .readContract({
-            address: ADDRESSES.milestoneConsumer,
+            address: addrs.milestoneConsumer,
             abi: MILESTONE_ABI,
             functionName: 'getLatestMilestone',
             args: [PROJECT_ID, id],
@@ -247,13 +232,13 @@ export function useContractData(): DashboardData {
       const roundPromises = roundIds.map(async (roundId) => {
         const [info, tranches] = await Promise.all([
           client.readContract({
-            address: ADDRESSES.fundingEngine,
+            address: addrs.fundingEngine,
             abi: FUNDING_ABI,
             functionName: 'getRoundInfo',
             args: [roundId],
           }),
           client.readContract({
-            address: ADDRESSES.fundingEngine,
+            address: addrs.fundingEngine,
             abi: FUNDING_ABI,
             functionName: 'getRoundTranches',
             args: [roundId],
@@ -284,7 +269,7 @@ export function useContractData(): DashboardData {
       // Fetch reserve data
       let reserves = DEMO_DATA.reserves
       try {
-        const engineBalance = await client.getBalance({ address: ADDRESSES.fundingEngine })
+        const engineBalance = await client.getBalance({ address: addrs.fundingEngine })
         reserves = {
           project: {
             ...DEMO_DATA.reserves.project,
@@ -340,5 +325,5 @@ export function useContractData(): DashboardData {
     return () => clearInterval(interval)
   }, [fetchData])
 
-  return data
+  return { data, refresh: fetchData }
 }

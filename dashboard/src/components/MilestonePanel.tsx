@@ -67,7 +67,7 @@ export function MilestonePanel({ milestones }: { milestones: MilestoneData[] }) 
 
       <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-xs text-gray-500">
         <span>{milestones.length} milestones configured</span>
-        <span>Chainlink CRE + AI Imagery Analysis</span>
+        <span>Chainlink CRE (Rule-Based Verification)</span>
       </div>
     </div>
   )

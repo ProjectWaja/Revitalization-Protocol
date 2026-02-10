@@ -1,19 +1,21 @@
 export function ArchitecturePanel() {
   const services = [
     { name: 'CRE Workflows', desc: 'Orchestrates multi-step oracle pipelines', color: 'bg-blue-500' },
+    { name: 'AI Agents (Claude)', desc: 'Solvency risk scoring with structured JSON consensus', color: 'bg-pink-500' },
     { name: 'Data Feeds', desc: 'Cost indices via commodity price proxies', color: 'bg-purple-500' },
     { name: 'CCIP', desc: 'Cross-chain funding to Polygon Amoy', color: 'bg-cyan-500' },
+    { name: 'Automation', desc: 'Expire stale rounds, periodic reserve checks', color: 'bg-yellow-500' },
     { name: 'Proof of Reserves', desc: 'Verifies project collateral and engine solvency', color: 'bg-emerald-500' },
     { name: 'Confidential Compute', desc: 'Privacy-preserving solvency calculations', color: 'bg-orange-500' },
-    { name: 'AI Risk Agents', desc: 'Claude-powered risk narratives and assessments', color: 'bg-pink-500' },
   ]
 
   const contracts = [
     { name: 'SolvencyConsumer.sol', desc: 'Receives real-time financial health reports' },
     { name: 'MilestoneConsumer.sol', desc: 'Receives satellite-verified progress reports' },
     { name: 'TokenizedFundingEngine.sol', desc: 'ERC-1155 fractional funding positions' },
-    { name: 'FundingBridgeReceiver.sol', desc: 'CCIP cross-chain receiver on Polygon' },
-    { name: 'ReserveVerifier.sol', desc: 'Chainlink PoR integration for collateral proof' },
+    { name: 'ReserveVerifier.sol', desc: 'Chainlink PoR + Automation for collateral proof' },
+    { name: 'ConfidentialSolvencyCompute.sol', desc: 'Privacy-preserving scoring with attestations' },
+    { name: 'FundingBridgeReceiver.sol', desc: 'CCIP cross-chain receiver stub' },
   ]
 
   return (
@@ -60,7 +62,7 @@ export function ArchitecturePanel() {
         <div className="bg-gray-800/50 rounded-lg p-4 font-mono text-xs text-gray-300 space-y-1 overflow-x-auto">
           <div>SolvencyOracle --CRE--{'>'} SolvencyConsumer --initiateRescueFunding()--{'>'} FundingEngine</div>
           <div>MilestoneOracle --CRE--{'>'} MilestoneConsumer --releaseTranche()-------{'>'} FundingEngine</div>
-          <div>FundingWorkflow --CRE--{'>'} reads all 3 contracts + AI risk assessment ---{'>'} Report</div>
+          <div>FundingWorkflow --CRE--{'>'} reads all 3 contracts + rule-based scoring ---{'>'} Report</div>
           <div>FundingEngine  --CCIP--{'>'} FundingBridgeReceiver (Polygon Amoy)</div>
           <div>ReserveVerifier --PoR--{'>'} verifies project reserves + engine solvency</div>
         </div>

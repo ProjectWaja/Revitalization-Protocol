@@ -1,14 +1,17 @@
 'use client'
 
+import { useState } from 'react'
 import { SolvencyPanel } from '@/components/SolvencyPanel'
 import { MilestonePanel } from '@/components/MilestonePanel'
 import { FundingPanel } from '@/components/FundingPanel'
 import { ReservePanel } from '@/components/ReservePanel'
 import { ArchitecturePanel } from '@/components/ArchitecturePanel'
-import { useContractData } from '@/hooks/useContractData'
+import { DemoControlPanel } from '@/components/DemoControlPanel'
+import { useContractData, type ContractAddresses } from '@/hooks/useContractData'
 
 export default function Dashboard() {
-  const data = useContractData()
+  const [addresses, setAddresses] = useState<ContractAddresses | null>(null)
+  const { data, refresh } = useContractData(addresses)
 
   return (
     <div className="space-y-8">
@@ -29,7 +32,7 @@ export default function Dashboard() {
           ) : (
             <span className="flex items-center gap-2 text-xs text-gray-400 bg-gray-400/10 px-3 py-1 rounded-full">
               <span className="w-2 h-2 rounded-full bg-gray-400" />
-              Demo Data
+              Waiting for Setup
             </span>
           )}
           {data.error && (
@@ -37,6 +40,13 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Demo Controls */}
+      <DemoControlPanel
+        onRefresh={refresh}
+        onAddressesChange={setAddresses}
+        addresses={addresses}
+      />
 
       {/* Top Row: Solvency + Reserves */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
