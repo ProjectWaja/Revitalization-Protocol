@@ -17,13 +17,13 @@ export function getClient(rpcUrl?: string) {
 // ---------------------------------------------------------------------------
 
 export const ADDRESSES = {
-  solvencyConsumer: (process.env.NEXT_PUBLIC_SOLVENCY_ADDRESS ?? '0x0000000000000000000000000000000000000000') as Address,
-  milestoneConsumer: (process.env.NEXT_PUBLIC_MILESTONE_ADDRESS ?? '0x0000000000000000000000000000000000000000') as Address,
-  fundingEngine: (process.env.NEXT_PUBLIC_FUNDING_ADDRESS ?? '0x0000000000000000000000000000000000000000') as Address,
-  reserveVerifier: (process.env.NEXT_PUBLIC_RESERVE_ADDRESS ?? '0x0000000000000000000000000000000000000000') as Address,
+  solvencyConsumer: (process.env.NEXT_PUBLIC_SOLVENCY_ADDRESS ?? '0x4127a05f683d02ec7c691d295261f8298bfdb20d') as Address,
+  milestoneConsumer: (process.env.NEXT_PUBLIC_MILESTONE_ADDRESS ?? '0x510046808d7f20e7e3cb0f23038461c99eb62da3') as Address,
+  fundingEngine: (process.env.NEXT_PUBLIC_FUNDING_ADDRESS ?? '0x96dbe5f3cf891a6a8da49e27568ae817c471d719') as Address,
+  reserveVerifier: (process.env.NEXT_PUBLIC_RESERVE_ADDRESS ?? '0x59b214722d632191921551ce59431acf65c05f0d') as Address,
 }
 
-export const PROJECT_ID = '0x5265766974616c697a6174696f6e50726f746f636f6c000000000000000001' as `0x${string}`
+export const PROJECT_ID = '0x5265766974616c697a6174696f6e50726f746f636f6c00000000000000000001' as `0x${string}`
 
 // ---------------------------------------------------------------------------
 // ABIs (minimal read-only subsets)

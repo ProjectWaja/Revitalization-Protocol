@@ -172,19 +172,11 @@ export function useContractData(): DashboardData {
   const [data, setData] = useState<DashboardData>(DEMO_DATA)
 
   const fetchData = useCallback(async () => {
-    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
-    if (!rpcUrl) return // No RPC configured, stay on demo data
-
-    const isAnvil = rpcUrl.includes('127.0.0.1') || rpcUrl.includes('localhost')
+    const rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? process.env.NEXT_PUBLIC_RPC_URL
+    const isAnvil = rpcUrl?.includes('127.0.0.1') || rpcUrl?.includes('localhost')
     const chain = isAnvil ? foundry : sepolia
 
     const client = createPublicClient({ chain, transport: http(rpcUrl) })
-
-    // Check if contracts are deployed
-    const hasContracts =
-      ADDRESSES.solvencyConsumer !== '0x0000000000000000000000000000000000000000'
-
-    if (!hasContracts) return
 
     try {
       // Fetch all data in parallel
