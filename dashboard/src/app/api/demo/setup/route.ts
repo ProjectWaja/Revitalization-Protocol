@@ -26,9 +26,17 @@ export async function POST() {
     receipt = await pub.waitForTransactionReceipt({ hash })
     const milestoneAddr = receipt.contractAddress!
 
+    // Deploy ETH/USD price feed first (needed by FundingEngine constructor)
+    hash = await admin.deployContract({
+      abi: priceFeed.abi, bytecode: priceFeed.bytecode,
+      args: [8, 250000000000n], // 8 decimals, $2500.00
+    })
+    receipt = await pub.waitForTransactionReceipt({ hash })
+    const priceFeedAddr = receipt.contractAddress!
+
     hash = await admin.deployContract({
       abi: funding.abi, bytecode: funding.bytecode,
-      args: ['https://rvp.example.com/metadata/{id}.json', '0x0000000000000000000000000000000000000000', 0n],
+      args: ['https://rvp.example.com/metadata/{id}.json', '0x0000000000000000000000000000000000000000', 0n, priceFeedAddr],
     })
     receipt = await pub.waitForTransactionReceipt({ hash })
     const engineAddr = receipt.contractAddress!
@@ -36,14 +44,6 @@ export async function POST() {
     hash = await admin.deployContract({ abi: reserve.abi, bytecode: reserve.bytecode, args: [engineAddr] })
     receipt = await pub.waitForTransactionReceipt({ hash })
     const reserveAddr = receipt.contractAddress!
-
-    // Deploy ETH/USD price feed (8 decimals, $2,500 initial price)
-    hash = await admin.deployContract({
-      abi: priceFeed.abi, bytecode: priceFeed.bytecode,
-      args: [8, 250000000000n], // 8 decimals, $2500.00
-    })
-    receipt = await pub.waitForTransactionReceipt({ hash })
-    const priceFeedAddr = receipt.contractAddress!
 
     // --- Wire hooks ---
     hash = await admin.writeContract({ address: solvencyAddr, abi: solvency.abi, functionName: 'setRescueFundingEngine', args: [engineAddr] })
