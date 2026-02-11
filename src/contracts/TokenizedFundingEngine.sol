@@ -78,6 +78,7 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
         uint256 totalReleased;
         uint256 deadline;
         uint256 investorCount;
+        uint16 rescuePremiumBps;    // Bonus for rescue investors (basis points, e.g., 4100 = 41%)
     }
 
     struct InvestorPosition {
@@ -112,6 +113,9 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
 
     /// @notice List of rounds per project
     mapping(bytes32 => uint256[]) public projectRounds;
+
+    /// @notice Admin-deposited premium pool per rescue round (in wei)
+    mapping(uint256 => uint256) public rescuePremiumPool;
 
     // =========================================================================
     // Events
@@ -159,6 +163,8 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
     event RoundCancelled(uint256 indexed roundId);
 
     event AutomationCancelledExpiredRound(uint256 indexed roundId);
+
+    event RescuePremiumDeposited(uint256 indexed roundId, uint256 amount, uint16 premiumBps);
 
     // =========================================================================
     // Constructor
@@ -232,7 +238,8 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
             totalDeposited: 0,
             totalReleased: 0,
             deadline: deadline,
-            investorCount: 0
+            investorCount: 0,
+            rescuePremiumBps: 0
         });
 
         for (uint256 i = 0; i < milestoneIds.length; i++) {
@@ -347,6 +354,10 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
         uint256 rescueTarget = uint256(100 - solvencyScore) * 0.1 ether;
         if (rescueTarget < 1 ether) rescueTarget = 1 ether;
 
+        // Calculate rescue premium: more severe → higher premium to attract capital (capped at 50%)
+        uint256 rawPremium = uint256(100 - solvencyScore) * 50;
+        uint16 premiumBps = uint16(rawPremium > 5000 ? 5000 : rawPremium);
+
         uint256 roundId = nextRoundId++;
         uint256 deadline = block.timestamp + 7 days;
 
@@ -359,7 +370,8 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
             totalDeposited: 0,
             totalReleased: 0,
             deadline: deadline,
-            investorCount: 0
+            investorCount: 0,
+            rescuePremiumBps: premiumBps
         });
 
         // Rescue rounds get a single tranche released immediately upon funding
@@ -398,10 +410,28 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
 
         pos.claimed += unclaimed;
 
-        (bool success, ) = payable(msg.sender).call{value: unclaimed}("");
+        // Calculate rescue premium bonus (if rescue round with funded premium pool)
+        uint256 premiumAmount = 0;
+        if (
+            round.roundType == RoundType.RESCUE &&
+            round.rescuePremiumBps > 0 &&
+            round.status != RoundStatus.CANCELLED
+        ) {
+            uint256 pool = rescuePremiumPool[roundId];
+            if (pool > 0) {
+                // Investor's pro-rata share of the premium pool
+                premiumAmount = (pool * pos.amount) / round.totalDeposited;
+                if (premiumAmount > pool) premiumAmount = pool;
+                rescuePremiumPool[roundId] -= premiumAmount;
+            }
+        }
+
+        uint256 totalPayout = unclaimed + premiumAmount;
+
+        (bool success, ) = payable(msg.sender).call{value: totalPayout}("");
         require(success, "ETH transfer failed");
 
-        emit FundsClaimedByInvestor(roundId, msg.sender, unclaimed);
+        emit FundsClaimedByInvestor(roundId, msg.sender, totalPayout);
     }
 
     /**
@@ -450,6 +480,24 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
     }
 
     /**
+     * @notice Admin deposits ETH into a rescue round's premium pool.
+     *         This funds the bonus payout for rescue investors who take on
+     *         the risk of saving a distressed project.
+     * @param roundId The rescue funding round
+     */
+    function depositRescuePremium(uint256 roundId) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(msg.value > 0, "Must send ETH");
+        FundingRound storage round = fundingRounds[roundId];
+        require(round.targetAmount > 0, "Round does not exist");
+        require(round.roundType == RoundType.RESCUE, "Not a rescue round");
+        require(round.rescuePremiumBps > 0, "No premium configured");
+
+        rescuePremiumPool[roundId] += msg.value;
+
+        emit RescuePremiumDeposited(roundId, msg.value, round.rescuePremiumBps);
+    }
+
+    /**
      * @notice Admin safety valve — cancel a round and allow investors to withdraw.
      * @param roundId The funding round to cancel
      */
@@ -490,7 +538,8 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
         uint256 totalDeposited,
         uint256 totalReleased,
         uint256 deadline,
-        uint256 investorCount
+        uint256 investorCount,
+        uint16 rescuePremiumBps
     ) {
         FundingRound memory r = fundingRounds[roundId];
         return (
@@ -501,8 +550,25 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
             r.totalDeposited,
             r.totalReleased,
             r.deadline,
-            r.investorCount
+            r.investorCount,
+            r.rescuePremiumBps
         );
+    }
+
+    /**
+     * @notice Returns rescue premium info for a round.
+     */
+    function getRescuePremiumInfo(uint256 roundId) external view returns (
+        uint16 premiumBps,
+        uint256 premiumPool,
+        uint256 estimatedBonusPerEth
+    ) {
+        FundingRound memory r = fundingRounds[roundId];
+        premiumBps = r.rescuePremiumBps;
+        premiumPool = rescuePremiumPool[roundId];
+        if (r.totalDeposited > 0) {
+            estimatedBonusPerEth = (premiumPool * 1 ether) / r.totalDeposited;
+        }
     }
 
     /**

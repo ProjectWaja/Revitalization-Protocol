@@ -94,6 +94,18 @@ export const FUNDING_ABI = [
       { name: 'totalReleased', type: 'uint256' },
       { name: 'deadline', type: 'uint256' },
       { name: 'investorCount', type: 'uint256' },
+      { name: 'rescuePremiumBps', type: 'uint16' },
+    ],
+  },
+  {
+    name: 'getRescuePremiumInfo',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'roundId', type: 'uint256' }],
+    outputs: [
+      { name: 'premiumBps', type: 'uint16' },
+      { name: 'premiumPool', type: 'uint256' },
+      { name: 'estimatedBonusPerEth', type: 'uint256' },
     ],
   },
   {

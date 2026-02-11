@@ -9,6 +9,7 @@ import { ArchitecturePanel } from '@/components/ArchitecturePanel'
 import { WorkflowPanel } from '@/components/WorkflowPanel'
 import { ConfidentialComputePanel } from '@/components/ConfidentialComputePanel'
 import { DemoControlPanel } from '@/components/DemoControlPanel'
+import { OceanwideScenarioPanel } from '@/components/OceanwideScenarioPanel'
 import { useContractData, type ContractAddresses } from '@/hooks/useContractData'
 
 export default function Dashboard() {
@@ -21,9 +22,9 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Project Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Oceanwide Plaza — Los Angeles</h1>
           <p className="text-gray-400 mt-1 text-sm sm:text-base">
-            Chicago Mixed-Use Infrastructure — Real-time monitoring via Chainlink CRE
+            $1.2B Mixed-Use Development, DTLA — Real-time monitoring via Chainlink CRE
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -62,6 +63,9 @@ export default function Dashboard() {
         onAddressesChange={setAddresses}
         addresses={addresses}
       />
+
+      {/* Oceanwide Plaza Scenario Demo */}
+      <OceanwideScenarioPanel addresses={addresses} onRefresh={refresh} />
 
       {/* Top Row: Solvency + Reserves */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

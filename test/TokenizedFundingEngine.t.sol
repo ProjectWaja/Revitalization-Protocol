@@ -32,6 +32,7 @@ contract TokenizedFundingEngineTest is Test {
         // Fund test accounts
         vm.deal(investor1, 100 ether);
         vm.deal(investor2, 100 ether);
+        vm.deal(address(this), 100 ether);
     }
 
     // =========================================================================
@@ -77,7 +78,7 @@ contract TokenizedFundingEngineTest is Test {
             uint256 totalDeposited,
             uint256 totalReleased,
             uint256 deadline,
-            uint256 investorCount
+            uint256 investorCount,
         ) = engine.getRoundInfo(roundId);
 
         assertEq(pid, projectId);
@@ -125,7 +126,7 @@ contract TokenizedFundingEngineTest is Test {
         assertEq(claimed, 0);
 
         // Check round state
-        (, , uint8 status, , uint256 totalDeposited, , , uint256 investorCount) =
+        (, , uint8 status, , uint256 totalDeposited, , , uint256 investorCount, ) =
             engine.getRoundInfo(roundId);
         assertEq(status, 0); // Still OPEN (target is 10 ETH)
         assertEq(totalDeposited, 5 ether);
@@ -139,7 +140,7 @@ contract TokenizedFundingEngineTest is Test {
         vm.prank(investor2);
         engine.invest{value: 5 ether}(roundId);
 
-        (, , status, , totalDeposited, , , investorCount) = engine.getRoundInfo(roundId);
+        (, , status, , totalDeposited, , , investorCount, ) = engine.getRoundInfo(roundId);
         assertEq(status, 1); // FUNDED
         assertEq(totalDeposited, 10 ether);
         assertEq(investorCount, 2);
@@ -160,7 +161,7 @@ contract TokenizedFundingEngineTest is Test {
         vm.prank(milestoneOracle);
         engine.releaseTranche(projectId, 0);
 
-        (, , uint8 status, , , uint256 totalReleased, , ) = engine.getRoundInfo(roundId);
+        (, , uint8 status, , , uint256 totalReleased, , , ) = engine.getRoundInfo(roundId);
         assertEq(status, 2); // RELEASING
         assertEq(totalReleased, 2.5 ether); // 25% of 10 ETH
 
@@ -203,7 +204,8 @@ contract TokenizedFundingEngineTest is Test {
             ,
             ,
             uint256 deadline,
-
+            ,
+            uint16 premiumBps
         ) = engine.getRoundInfo(1);
 
         assertEq(pid, projectId);
@@ -212,6 +214,8 @@ contract TokenizedFundingEngineTest is Test {
         // Target: (100 - 15) * 0.1 ether = 8.5 ether
         assertEq(targetAmount, 8.5 ether);
         assertEq(deadline, block.timestamp + 7 days);
+        // Premium: min(5000, (100 - 15) * 50) = 4250 bps
+        assertEq(premiumBps, 4250);
 
         // Should have single tranche at 100%
         (
@@ -301,7 +305,7 @@ contract TokenizedFundingEngineTest is Test {
             basisPoints
         );
 
-        (, , uint8 status, , , , , ) = engine.getRoundInfo(1);
+        (, , uint8 status, , , , , , ) = engine.getRoundInfo(1);
         assertEq(status, 0); // OPEN
     }
 
@@ -355,7 +359,7 @@ contract TokenizedFundingEngineTest is Test {
         engine.performUpkeep(performData);
 
         // Verify round is CANCELLED
-        (, , uint8 status, , , uint256 totalReleased, , ) = engine.getRoundInfo(1);
+        (, , uint8 status, , , uint256 totalReleased, , , ) = engine.getRoundInfo(1);
         assertEq(status, 4); // CANCELLED
         assertEq(totalReleased, 3 ether); // Refundable
     }
@@ -371,7 +375,7 @@ contract TokenizedFundingEngineTest is Test {
         // Round is NOT expired — performUpkeep should be a no-op
         engine.performUpkeep(stalePerformData);
 
-        (, , uint8 status, , , , , ) = engine.getRoundInfo(1);
+        (, , uint8 status, , , , , , ) = engine.getRoundInfo(1);
         assertEq(status, 0); // Still OPEN
     }
 
@@ -426,5 +430,74 @@ contract TokenizedFundingEngineTest is Test {
         // Default engine has no price feed
         vm.expectRevert("Price feed not set");
         engine.getEthPriceUsd();
+    }
+
+    // =========================================================================
+    // Test: Rescue Premium — Full Claim Flow
+    // =========================================================================
+
+    function testRescuePremiumClaimFlow() public {
+        // Trigger rescue round (score 20 → premium = min(5000, (100-20)*50) = 4000 bps)
+        vm.prank(solvencyOracle);
+        engine.initiateRescueFunding(projectId, 20);
+
+        uint256 roundId = 1;
+
+        // Verify premium configured
+        (, , , , , , , , uint16 premiumBps) = engine.getRoundInfo(roundId);
+        assertEq(premiumBps, 4000); // 40% bonus
+
+        // Admin deposits premium pool (3.2 ETH for 40% of 8 ETH target)
+        engine.depositRescuePremium{value: 3.2 ether}(roundId);
+        (uint16 pBps, uint256 pool, ) = engine.getRescuePremiumInfo(roundId);
+        assertEq(pBps, 4000);
+        assertEq(pool, 3.2 ether);
+
+        // Investor funds the rescue round
+        vm.prank(investor1);
+        engine.invest{value: 8 ether}(roundId);
+
+        // Release tranche (rescue rounds have single 100% tranche at milestone 0)
+        vm.prank(milestoneOracle);
+        engine.releaseTranche(projectId, 0);
+
+        // Investor claims: should get 8 ETH (principal) + 3.2 ETH (premium) = 11.2 ETH
+        uint256 balBefore = investor1.balance;
+        vm.prank(investor1);
+        engine.claimReleasedFunds(roundId);
+        uint256 received = investor1.balance - balBefore;
+
+        assertEq(received, 11.2 ether);
+
+        // Premium pool should be drained
+        (, pool, ) = engine.getRescuePremiumInfo(roundId);
+        assertEq(pool, 0);
+    }
+
+    // =========================================================================
+    // Test: Rescue Premium — Admin-Only Deposit
+    // =========================================================================
+
+    function testDepositRescuePremiumOnlyAdmin() public {
+        // Trigger rescue round
+        vm.prank(solvencyOracle);
+        engine.initiateRescueFunding(projectId, 20);
+
+        // Non-admin should revert
+        vm.prank(investor1);
+        vm.expectRevert();
+        engine.depositRescuePremium{value: 1 ether}(1);
+    }
+
+    // =========================================================================
+    // Test: Rescue Premium — Cannot Deposit on Standard Round
+    // =========================================================================
+
+    function testNoPremiumForStandardRound() public {
+        uint256 roundId = _createStandardRound();
+
+        // Premium deposit on standard round should revert
+        vm.expectRevert("Not a rescue round");
+        engine.depositRescuePremium{value: 1 ether}(roundId);
     }
 }

@@ -97,12 +97,12 @@ No Chainlink oracle service currently covers **satellite/drone imagery analysis*
 |----------|-------------|-------|
 | `SolvencyConsumer.sol` | Receives CRE solvency reports, triggers rescue funding via cross-module hook | 17 |
 | `MilestoneConsumer.sol` | Receives milestone reports, releases tranches via cross-module hook | 21 |
-| `TokenizedFundingEngine.sol` | ERC-1155 tokenized funding rounds, CCIP cross-chain, Automation, Data Feeds | 16 |
+| `TokenizedFundingEngine.sol` | ERC-1155 tokenized funding rounds, CCIP cross-chain, Automation, Data Feeds, Rescue Premium | 19 |
 | `FundingBridgeReceiver.sol` | Real CCIPReceiver for cross-chain funding messages | 9 |
 | `ReserveVerifier.sol` | Chainlink PoR + Automation for periodic reserve verification | 14 |
 | `ConfidentialSolvencyCompute.sol` | Privacy-preserving solvency scoring with attestation hashes | 15 |
 | `Integration.t.sol` | End-to-end lifecycle: deploy, fund, milestone, tranche, rescue, automation, CC | 8 |
-| **Total** | | **100** |
+| **Total** | | **103** |
 
 ## Tech Stack
 
@@ -122,7 +122,7 @@ bun install
 # Build contracts
 forge build
 
-# Run all 100 tests
+# Run all 103 tests
 forge test
 
 # Run with verbose output

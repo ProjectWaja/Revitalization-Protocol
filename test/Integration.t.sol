@@ -123,7 +123,7 @@ contract IntegrationTest is Test {
         uint256 deposited;
         uint256 released;
         uint256 count;
-        (, , status, , deposited, , , count) = engine.getRoundInfo(1);
+        (, , status, , deposited, , , count, ) = engine.getRoundInfo(1);
         assertEq(status, 1); // FUNDED
         assertEq(deposited, 10 ether);
         assertEq(count, 2);
@@ -142,7 +142,7 @@ contract IntegrationTest is Test {
         milestone.receiveMilestoneReport(milestoneReport);
 
         // This should have triggered releaseTranche(projectId, 0) on the engine
-        (, , status, , , released, , ) = engine.getRoundInfo(1);
+        (, , status, , , released, , , ) = engine.getRoundInfo(1);
         assertEq(status, 2); // RELEASING
         assertEq(released, 2.5 ether); // 25% of 10 ETH
 
@@ -174,7 +174,7 @@ contract IntegrationTest is Test {
         }
 
         // Round should be COMPLETED
-        (, , status, , , released, , ) = engine.getRoundInfo(1);
+        (, , status, , , released, , , ) = engine.getRoundInfo(1);
         assertEq(status, 3); // COMPLETED
         assertEq(released, 10 ether); // All tranches released
     }
@@ -207,7 +207,7 @@ contract IntegrationTest is Test {
         uint8 status;
         uint256 targetAmount;
         uint256 deadline;
-        (pid, roundType, status, targetAmount, , , deadline, ) = engine.getRoundInfo(1);
+        (pid, roundType, status, targetAmount, , , deadline, , ) = engine.getRoundInfo(1);
 
         assertEq(pid, projectId);
         assertEq(roundType, 1); // RESCUE
@@ -220,7 +220,7 @@ contract IntegrationTest is Test {
         vm.prank(investor1);
         engine.invest{value: 8.5 ether}(1);
 
-        (, , status, , , , , ) = engine.getRoundInfo(1);
+        (, , status, , , , , , ) = engine.getRoundInfo(1);
         assertEq(status, 1); // FUNDED
     }
 
@@ -326,8 +326,8 @@ contract IntegrationTest is Test {
         engine.invest{value: 9 ether}(2);
 
         // Both rounds should be FUNDED
-        (, , uint8 status1, , , , , ) = engine.getRoundInfo(1);
-        (, , uint8 status2, , , , , ) = engine.getRoundInfo(2);
+        (, , uint8 status1, , , , , , ) = engine.getRoundInfo(1);
+        (, , uint8 status2, , , , , , ) = engine.getRoundInfo(2);
         assertEq(status1, 1); // FUNDED
         assertEq(status2, 1); // FUNDED
 
@@ -340,13 +340,13 @@ contract IntegrationTest is Test {
 
         // Standard round: 50% released (milestone 0 = 5000 bps)
         uint256 released1;
-        (, , , , , released1, , ) = engine.getRoundInfo(1);
+        (, , , , , released1, , , ) = engine.getRoundInfo(1);
         assertEq(released1, 5 ether);
 
         // Rescue round: has milestone 0 tranche at 10000 bps → full release
         uint8 status2After;
         uint256 released2;
-        (,, status2After,,, released2,,) = engine.getRoundInfo(2);
+        (,, status2After,,, released2,,,) = engine.getRoundInfo(2);
         assertEq(released2, 9 ether);
         assertEq(status2After, 3); // COMPLETED
     }
@@ -366,7 +366,7 @@ contract IntegrationTest is Test {
         solvency.receiveSolvencyReport(report);
 
         // Verify rescue round exists and is OPEN
-        (, , uint8 status, , , , , ) = engine.getRoundInfo(1);
+        (, , uint8 status, , , , , , ) = engine.getRoundInfo(1);
         assertEq(status, 0); // OPEN
 
         // Warp past the 7-day deadline
@@ -379,7 +379,7 @@ contract IntegrationTest is Test {
         // Automation cancels the expired round
         engine.performUpkeep(performData);
 
-        (, , status, , , , , ) = engine.getRoundInfo(1);
+        (, , status, , , , , , ) = engine.getRoundInfo(1);
         assertEq(status, 4); // CANCELLED
     }
 

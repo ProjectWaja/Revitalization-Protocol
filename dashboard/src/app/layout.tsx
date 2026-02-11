@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Revitalization Protocol — Dashboard',
+  title: 'Revitalization Protocol — Oceanwide Plaza',
   description: 'Infrastructure project monitoring powered by Chainlink CRE, CCIP, and Proof of Reserves',
 }
 

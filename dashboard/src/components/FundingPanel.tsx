@@ -29,11 +29,24 @@ function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) 
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-medium">Round #{round.roundId}</h3>
           <span className="text-xs text-gray-500">{round.roundType}</span>
+          {round.roundType === 'RESCUE' && round.rescuePremiumBps > 0 && (
+            <span className="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+              +{(round.rescuePremiumBps / 100).toFixed(0)}% Bonus
+            </span>
+          )}
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[status]}`}>
           {status}
         </span>
       </div>
+
+      {/* Premium Pool Info */}
+      {round.roundType === 'RESCUE' && round.rescuePremiumBps > 0 && round.premiumPool > 0 && (
+        <div className="mb-4 bg-amber-400/5 border border-amber-400/20 rounded-lg p-3 flex items-center justify-between">
+          <span className="text-xs text-amber-300">Rescue Premium Pool</span>
+          <span className="text-sm font-mono text-amber-400">{round.premiumPool.toFixed(2)} ETH</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Round Overview */}

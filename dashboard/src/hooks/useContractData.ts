@@ -67,6 +67,9 @@ export interface RoundData {
   totalReleased: number
   deadline: number
   investorCount: number
+  rescuePremiumBps: number
+  premiumPool: number
+  estimatedBonusPerEth: number
   tranches: TrancheData[]
 }
 
@@ -234,7 +237,7 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
       // Fetch rounds
       const roundIds = (roundsResult as readonly bigint[]) ?? []
       const roundPromises = roundIds.map(async (roundId) => {
-        const [info, tranches] = await Promise.all([
+        const [info, tranches, premiumInfo] = await Promise.all([
           client.readContract({
             address: addrs.fundingEngine,
             abi: FUNDING_ABI,
@@ -247,10 +250,17 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
             functionName: 'getRoundTranches',
             args: [roundId],
           }),
+          client.readContract({
+            address: addrs.fundingEngine,
+            abi: FUNDING_ABI,
+            functionName: 'getRescuePremiumInfo',
+            args: [roundId],
+          }).catch(() => null),
         ])
 
-        const r = info as readonly [string, number, number, bigint, bigint, bigint, bigint, bigint]
+        const r = info as readonly [string, number, number, bigint, bigint, bigint, bigint, bigint, number]
         const t = tranches as readonly [readonly number[], readonly number[], readonly boolean[]]
+        const p = premiumInfo as readonly [number, bigint, bigint] | null
 
         return {
           roundId: Number(roundId),
@@ -261,6 +271,9 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
           totalReleased: Number(formatEther(r[5])),
           deadline: Number(r[6]),
           investorCount: Number(r[7]),
+          rescuePremiumBps: r[8],
+          premiumPool: p ? Number(formatEther(p[1])) : 0,
+          estimatedBonusPerEth: p ? Number(formatEther(p[2])) : 0,
           tranches: t[0].map((mid, idx) => ({
             milestoneId: mid,
             basisPoints: t[1][idx],
