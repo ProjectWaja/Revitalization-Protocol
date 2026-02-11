@@ -25,8 +25,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Oceanwide Plaza — Los Angeles</h1>
-          <p className="text-gray-400 mt-1 text-sm sm:text-base">
+          <h1 className="text-3xl sm:text-4xl font-bold">Oceanwide Plaza — Los Angeles</h1>
+          <p className="text-gray-400 mt-1 text-base sm:text-lg">
             $1.2B Mixed-Use Development, DTLA — Real-time monitoring via Chainlink CRE
           </p>
         </div>

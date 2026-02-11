@@ -163,20 +163,20 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
       <div className="px-6 py-5 border-b border-gray-800">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Oceanwide Plaza — Interactive Scenario Demo</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h2 className="text-xl font-semibold">Oceanwide Plaza — Interactive Scenario Demo</h2>
+            <p className="text-base text-gray-500 mt-0.5">
               Choose a scenario for each stage to see how the protocol responds differently
             </p>
           </div>
           {addresses && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
+              <span className="text-sm text-green-400 bg-green-400/10 px-3 py-1 rounded-full">
                 Contracts Deployed
               </span>
               <button
                 onClick={resetDemo}
                 disabled={resetting}
-                className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-2.5 py-1 rounded-md transition-colors disabled:opacity-50"
+                className="text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
               >
                 {resetting ? (
                   <span className="flex items-center gap-1">
@@ -196,8 +196,8 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-medium text-blue-300">Deploy Contracts to Anvil</h3>
-                <p className="text-xs text-gray-400 mt-1">
+                <h3 className="text-base font-medium text-blue-300">Deploy Contracts to Anvil</h3>
+                <p className="text-sm text-gray-400 mt-1">
                   Deploys SolvencyConsumer, MilestoneConsumer, TokenizedFundingEngine, ReserveVerifier and wires cross-module hooks.
                 </p>
               </div>
@@ -234,7 +234,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                     key={s.id}
                     onClick={() => !locked && setActiveStage(s.id)}
                     disabled={locked}
-                    className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex-1 px-4 py-3 rounded-lg text-base font-medium transition-all ${
                       locked ? 'bg-gray-800/50 text-gray-600 cursor-not-allowed' : isActive ? tc.active : tc.inactive
                     }`}
                   >
@@ -247,7 +247,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                       {isDone && <span className="text-xs">&#10003;</span>}
                       <span>Stage {s.id}: {s.label}</span>
                     </div>
-                    <div className="text-xs mt-0.5 opacity-70">{s.period}</div>
+                    <div className="text-sm mt-0.5 opacity-70">{s.period}</div>
                   </button>
                 )
               })}
@@ -255,7 +255,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
 
             {/* Stage Narrative */}
             <div className="bg-gray-800/40 rounded-lg p-4">
-              <p className="text-sm text-gray-300 leading-relaxed">{stageDef.narrative}</p>
+              <p className="text-base text-gray-300 leading-relaxed">{stageDef.narrative}</p>
             </div>
 
             {/* Variant Cards */}
@@ -277,18 +277,18 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                       } ${status === 'running' ? 'pointer-events-none opacity-70' : ''}`}
                     >
                       {/* Card Header */}
-                      <div className={`px-3 py-2 rounded-t-lg ${vc.header} flex items-center justify-between`}>
+                      <div className={`px-4 py-2.5 rounded-t-lg ${vc.header} flex items-center justify-between`}>
                         <div>
-                          <span className="text-sm font-semibold">{v.label}</span>
-                          {wasExecuted && <span className="ml-2 text-xs opacity-70">&#10003; ran</span>}
+                          <span className="text-base font-semibold">{v.label}</span>
+                          {wasExecuted && <span className="ml-2 text-sm opacity-70">&#10003; ran</span>}
                         </div>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${vc.badge}`}>
+                        <span className={`text-sm px-2 py-0.5 rounded ${vc.badge}`}>
                           {vk === 'good' ? 'GOOD' : vk === 'neutral' ? 'NEUTRAL' : 'BAD'}
                         </span>
                       </div>
 
-                      <div className="px-3 py-3 space-y-2.5">
-                        <p className="text-sm text-gray-400 italic">{v.tagline}</p>
+                      <div className="px-4 py-3 space-y-3">
+                        <p className="text-base text-gray-400 italic">{v.tagline}</p>
 
                         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                           <MetricPill label="Solvency" value={v.preview.solvency} />
@@ -300,10 +300,10 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                         </div>
 
                         <div>
-                          <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">What triggers</div>
+                          <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">What triggers</div>
                           <ul className="space-y-0.5">
                             {v.triggers.map((t, i) => (
-                              <li key={i} className="text-sm text-gray-400 flex items-start gap-1.5">
+                              <li key={i} className="text-base text-gray-400 flex items-start gap-1.5">
                                 <span className="text-gray-600 mt-0.5 flex-shrink-0">&#8226;</span>
                                 {t}
                               </li>
@@ -312,10 +312,10 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                         </div>
 
                         <div>
-                          <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">What you&apos;ll see</div>
+                          <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">What you&apos;ll see</div>
                           <ul className="space-y-0.5">
                             {v.outcomes.map((o, i) => (
-                              <li key={i} className="text-sm text-gray-400 flex items-start gap-1.5">
+                              <li key={i} className="text-base text-gray-400 flex items-start gap-1.5">
                                 <span className="text-gray-600 mt-0.5 flex-shrink-0">&#8226;</span>
                                 {o}
                               </li>
@@ -330,7 +330,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                               runStage(activeStage, vk)
                             }}
                             disabled={isRunning}
-                            className={`w-full py-2 rounded-lg text-xs font-medium transition-colors ${
+                            className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
                               isRunning ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : vc.btn
                             }`}
                           >
@@ -391,7 +391,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
             {/* Enriched Transaction Log */}
             {steps.length > 0 && (
               <div className="bg-gray-800/30 rounded-lg p-4">
-                <h4 className="text-sm text-gray-500 mb-3 uppercase tracking-wider">
+                <h4 className="text-base text-gray-500 mb-3 uppercase tracking-wider">
                   Transaction Log — Stage {activeStage}
                   {executedVariants[activeStage] && (
                     <span className="ml-2 normal-case text-gray-600">
@@ -423,11 +423,11 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                           {/* Contract badge + step text */}
                           <div className="flex items-start gap-2">
                             {contractColors && contractShort && (
-                              <span className={`flex-shrink-0 text-xs px-1.5 py-0.5 rounded ${contractColors.bg} ${contractColors.text} ${contractColors.border} border font-medium mt-px`}>
+                              <span className={`flex-shrink-0 text-sm px-2 py-0.5 rounded ${contractColors.bg} ${contractColors.text} ${contractColors.border} border font-medium mt-px`}>
                                 {contractShort}
                               </span>
                             )}
-                            <span className="text-sm text-gray-300">{s.step}</span>
+                            <span className="text-base text-gray-300">{s.step}</span>
                           </div>
 
                           {/* Cross-contract hook indicator */}
@@ -436,7 +436,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                               <svg className="w-3 h-3 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                               </svg>
-                              <span className="text-xs text-blue-300">
+                              <span className="text-sm text-blue-300">
                                 {CONTRACT_SHORT[s.crossContractHook.from as ContractName] ?? s.crossContractHook.from}
                                 {' → '}
                                 {CONTRACT_SHORT[s.crossContractHook.to as ContractName] ?? s.crossContractHook.to}
@@ -455,7 +455,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                                 return (
                                   <span
                                     key={j}
-                                    className={`text-xs px-1.5 py-0.5 rounded ${evtColors?.bg ?? 'bg-gray-700'} ${evtColors?.text ?? 'text-gray-400'} font-mono`}
+                                    className={`text-sm px-2 py-0.5 rounded ${evtColors?.bg ?? 'bg-gray-700'} ${evtColors?.text ?? 'text-gray-400'} font-mono`}
                                   >
                                     {evt.event}{argStr ? ` ${argStr}` : ''}
                                   </span>
@@ -466,7 +466,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
 
                           {/* Tx hash */}
                           {s.hash && (
-                            <div className="text-xs text-gray-600 font-mono truncate mt-0.5">
+                            <div className="text-sm text-gray-600 font-mono truncate mt-0.5">
                               tx: {s.hash}
                             </div>
                           )}
@@ -487,8 +487,8 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-xs text-gray-600 uppercase tracking-wider">{label}</span>
-      <span className="text-sm text-gray-300 leading-tight">{value}</span>
+      <span className="text-sm text-gray-600 uppercase tracking-wider">{label}</span>
+      <span className="text-base text-gray-300 font-medium leading-tight">{value}</span>
     </div>
   )
 }

@@ -14,7 +14,7 @@ interface Props {
 
 export function TabNavigation({ activeTab, onTabChange }: Props) {
   return (
-    <div className="sticky top-0 z-20 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800 -mx-6 px-6">
+    <div className="sticky top-0 z-20 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800 -mx-8 px-8">
       <nav className="flex gap-1">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key
@@ -22,13 +22,13 @@ export function TabNavigation({ activeTab, onTabChange }: Props) {
             <button
               key={tab.key}
               onClick={() => onTabChange(tab.key)}
-              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`relative flex items-center gap-2 px-5 py-3.5 text-base font-medium transition-colors ${
                 isActive
                   ? 'text-white'
                   : 'text-gray-500 hover:text-gray-300'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
               </svg>
               {tab.label}

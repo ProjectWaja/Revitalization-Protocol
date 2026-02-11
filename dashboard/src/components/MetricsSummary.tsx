@@ -29,29 +29,29 @@ export function MetricsSummary({ data }: { data: DashboardData }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Solvency Score */}
-      <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-        <div className="text-sm text-gray-400 mb-1">Solvency Score</div>
+      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+        <div className="text-base text-gray-400 mb-1">Solvency Score</div>
         <div className="flex items-end gap-3">
-          <span className={`text-3xl font-bold font-mono ${
+          <span className={`text-4xl font-bold font-mono ${
             data.solvency.overallScore >= 75 ? 'text-green-400' :
             data.solvency.overallScore >= 50 ? 'text-yellow-400' :
             data.solvency.overallScore >= 25 ? 'text-orange-400' : 'text-red-400'
           }`}>
             {data.solvency.overallScore}
           </span>
-          <span className={`text-sm font-medium px-2 py-0.5 rounded ${riskColor.text} ${riskColor.bg} mb-1`}>
+          <span className={`text-base font-medium px-2 py-0.5 rounded ${riskColor.text} ${riskColor.bg} mb-1`}>
             {risk}
           </span>
         </div>
-        <div className="text-sm text-gray-500 mt-2">
+        <div className="text-base text-gray-500 mt-2">
           {data.solvency.rescueTriggered ? 'Rescue triggered' : 'Normal operations'}
         </div>
       </div>
 
       {/* Milestone Progress */}
-      <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-        <div className="text-sm text-gray-400 mb-1">Milestone Progress</div>
-        <div className="text-3xl font-bold font-mono text-white">
+      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+        <div className="text-base text-gray-400 mb-1">Milestone Progress</div>
+        <div className="text-4xl font-bold font-mono text-white">
           {completedMilestones}/{totalMilestones}
         </div>
         <div className="mt-2">
@@ -61,32 +61,32 @@ export function MetricsSummary({ data }: { data: DashboardData }) {
               style={{ width: `${milestonePercent}%` }}
             />
           </div>
-          <div className="text-sm text-gray-500 mt-1">{milestonePercent.toFixed(0)}% complete</div>
+          <div className="text-base text-gray-500 mt-1">{milestonePercent.toFixed(0)}% complete</div>
         </div>
       </div>
 
       {/* Funding Status */}
-      <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-        <div className="text-sm text-gray-400 mb-1">Funding Status</div>
-        <div className="text-3xl font-bold font-mono text-white">
+      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+        <div className="text-base text-gray-400 mb-1">Funding Status</div>
+        <div className="text-4xl font-bold font-mono text-white">
           {totalRaised.toFixed(1)}
           <span className="text-lg text-gray-500"> ETH</span>
         </div>
-        <div className="text-sm text-gray-500 mt-2">
+        <div className="text-base text-gray-500 mt-2">
           {totalTarget > 0 ? `${((totalRaised / totalTarget) * 100).toFixed(0)}% of ${totalTarget.toFixed(1)} ETH target` : 'No rounds active'}
           {data.rounds.length > 0 && ` — ${data.rounds.length} round${data.rounds.length !== 1 ? 's' : ''}`}
         </div>
       </div>
 
       {/* Reserve Coverage */}
-      <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
-        <div className="text-sm text-gray-400 mb-1">Reserve Coverage</div>
-        <div className={`text-3xl font-bold font-mono ${
+      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+        <div className="text-base text-gray-400 mb-1">Reserve Coverage</div>
+        <div className={`text-4xl font-bold font-mono ${
           coverageRatio >= 100 ? 'text-green-400' : coverageRatio > 0 ? 'text-red-400' : 'text-gray-500'
         }`}>
           {coverageRatio > 0 ? `${coverageRatio.toFixed(0)}%` : '--'}
         </div>
-        <div className="text-sm text-gray-500 mt-2">
+        <div className="text-base text-gray-500 mt-2">
           {engineStatus === 'VERIFIED' ? 'Fully verified' :
            engineStatus === 'UNDER_RESERVED' ? 'Under-reserved' :
            'Awaiting verification'}
