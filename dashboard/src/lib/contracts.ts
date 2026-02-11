@@ -145,3 +145,33 @@ export const RESERVE_ABI = [
     ],
   },
 ] as const
+
+export const PRICE_FEED_ABI = [
+  {
+    name: 'latestRoundData',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [
+      { name: 'roundId', type: 'uint80' },
+      { name: 'answer', type: 'int256' },
+      { name: 'startedAt', type: 'uint256' },
+      { name: 'updatedAt', type: 'uint256' },
+      { name: 'answeredInRound', type: 'uint80' },
+    ],
+  },
+  {
+    name: 'decimals',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint8' }],
+  },
+  {
+    name: 'description',
+    type: 'function',
+    stateMutability: 'pure',
+    inputs: [],
+    outputs: [{ name: '', type: 'string' }],
+  },
+] as const

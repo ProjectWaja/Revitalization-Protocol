@@ -9,7 +9,15 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'text-red-400 bg-red-400/10',
 }
 
-function RoundCard({ round }: { round: RoundData }) {
+function formatUsd(eth: number, ethPrice: number): string {
+  if (ethPrice <= 0) return ''
+  const usd = eth * ethPrice
+  if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(1)}M`
+  if (usd >= 1_000) return `$${(usd / 1_000).toFixed(1)}K`
+  return `$${usd.toFixed(0)}`
+}
+
+function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) {
   const status = ROUND_STATUS[round.status]
   const daysLeft = Math.max(0, Math.floor((round.deadline - Date.now() / 1000) / 86400))
   const fundingProgress = round.targetAmount > 0 ? (round.totalDeposited / round.targetAmount) * 100 : 0
@@ -34,7 +42,10 @@ function RoundCard({ round }: { round: RoundData }) {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-400">Funding Progress</span>
-                <span className="font-mono">{round.totalDeposited.toFixed(1)}/{round.targetAmount.toFixed(1)} ETH</span>
+                <span className="font-mono">
+                  {round.totalDeposited.toFixed(1)}/{round.targetAmount.toFixed(1)} ETH
+                  {ethPrice > 0 && <span className="text-gray-500 ml-1">({formatUsd(round.totalDeposited, ethPrice)})</span>}
+                </span>
               </div>
               <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, fundingProgress)}%` }} />
@@ -44,7 +55,10 @@ function RoundCard({ round }: { round: RoundData }) {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-400">Tranche Release</span>
-                <span className="font-mono">{round.totalReleased.toFixed(1)}/{round.totalDeposited.toFixed(1)} ETH</span>
+                <span className="font-mono">
+                  {round.totalReleased.toFixed(1)}/{round.totalDeposited.toFixed(1)} ETH
+                  {ethPrice > 0 && <span className="text-gray-500 ml-1">({formatUsd(round.totalReleased, ethPrice)})</span>}
+                </span>
               </div>
               <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, releaseProgress)}%` }} />
@@ -87,17 +101,22 @@ function RoundCard({ round }: { round: RoundData }) {
   )
 }
 
-export function FundingPanel({ rounds }: { rounds: RoundData[] }) {
+export function FundingPanel({ rounds, ethPrice = 0 }: { rounds: RoundData[]; ethPrice?: number }) {
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">Tokenized Funding Engine</h2>
+        <div>
+          <h2 className="text-xl font-semibold">Tokenized Funding Engine</h2>
+          {ethPrice > 0 && (
+            <span className="text-xs text-gray-500">ETH/USD: ${ethPrice.toLocaleString()} via Chainlink Data Feed</span>
+          )}
+        </div>
         <span className="text-sm text-gray-400">{rounds.length} round{rounds.length !== 1 ? 's' : ''}</span>
       </div>
 
       <div className="space-y-4">
         {rounds.map((round) => (
-          <RoundCard key={round.roundId} round={round} />
+          <RoundCard key={round.roundId} round={round} ethPrice={ethPrice} />
         ))}
         {rounds.length === 0 && (
           <div className="text-center text-gray-500 py-8">No funding rounds created yet</div>
@@ -106,7 +125,7 @@ export function FundingPanel({ rounds }: { rounds: RoundData[] }) {
 
       <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-xs text-gray-500">
         <span>ERC-1155 Position Tokens</span>
-        <span>CCIP Cross-Chain Ready</span>
+        <span>Chainlink Data Feeds + CCIP</span>
       </div>
     </div>
   )

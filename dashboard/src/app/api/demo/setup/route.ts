@@ -15,6 +15,7 @@ export async function POST() {
     const milestone = loadArtifact('MilestoneConsumer')
     const funding = loadArtifact('TokenizedFundingEngine')
     const reserve = loadArtifact('ReserveVerifier')
+    const priceFeed = loadArtifact('MockV3Aggregator')
 
     // --- Deploy ---
     let hash = await admin.deployContract({ abi: solvency.abi, bytecode: solvency.bytecode, args: [workflow.account.address] })
@@ -35,6 +36,14 @@ export async function POST() {
     hash = await admin.deployContract({ abi: reserve.abi, bytecode: reserve.bytecode, args: [engineAddr] })
     receipt = await pub.waitForTransactionReceipt({ hash })
     const reserveAddr = receipt.contractAddress!
+
+    // Deploy ETH/USD price feed (8 decimals, $2,500 initial price)
+    hash = await admin.deployContract({
+      abi: priceFeed.abi, bytecode: priceFeed.bytecode,
+      args: [8, 250000000000n], // 8 decimals, $2500.00
+    })
+    receipt = await pub.waitForTransactionReceipt({ hash })
+    const priceFeedAddr = receipt.contractAddress!
 
     // --- Wire hooks ---
     hash = await admin.writeContract({ address: solvencyAddr, abi: solvency.abi, functionName: 'setRescueFundingEngine', args: [engineAddr] })
@@ -95,6 +104,7 @@ export async function POST() {
         milestoneConsumer: milestoneAddr,
         fundingEngine: engineAddr,
         reserveVerifier: reserveAddr,
+        priceFeed: priceFeedAddr,
       },
     })
   } catch (err) {

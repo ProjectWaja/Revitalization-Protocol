@@ -10,6 +10,7 @@ import {
   MILESTONE_ABI,
   FUNDING_ABI,
   RESERVE_ABI,
+  PRICE_FEED_ABI,
 } from '@/lib/contracts'
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,7 @@ export interface ContractAddresses {
   milestoneConsumer: Address
   fundingEngine: Address
   reserveVerifier: Address
+  priceFeed?: Address
 }
 
 export interface SolvencyData {
@@ -90,6 +92,7 @@ export interface DashboardData {
   milestones: MilestoneData[]
   rounds: RoundData[]
   reserves: ReserveData
+  ethPrice: number // USD per ETH from Chainlink Data Feed
   isLive: boolean
   lastUpdated: number
   error: string | null
@@ -132,6 +135,7 @@ const DEMO_DATA: DashboardData = {
     project: { porReported: 0, onchainBalance: 0, claimed: 0, status: 0, reserveRatio: 0, timestamp: 0 },
     engine: { contractBalance: 0, reportedDeposits: 0, status: 0, timestamp: 0 },
   },
+  ethPrice: 0,
   isLive: false,
   lastUpdated: Date.now(),
   error: null,
@@ -266,24 +270,90 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
       })
       const rounds = await Promise.all(roundPromises)
 
-      // Fetch reserve data
+      // Fetch reserve data from ReserveVerifier contract
       let reserves = DEMO_DATA.reserves
       try {
-        const engineBalance = await client.getBalance({ address: addrs.fundingEngine })
-        reserves = {
-          project: {
-            ...DEMO_DATA.reserves.project,
-            timestamp: Math.floor(Date.now() / 1000),
-          },
-          engine: {
-            contractBalance: Number(formatEther(engineBalance)),
-            reportedDeposits: rounds.reduce((sum, r) => sum + r.totalDeposited, 0),
-            status: Number(formatEther(engineBalance)) >= rounds.reduce((sum, r) => sum + r.totalDeposited, 0) ? 1 : 2,
-            timestamp: Math.floor(Date.now() / 1000),
-          },
+        const [projectVerification, engineVerification, engineBalance] = await Promise.all([
+          client.readContract({
+            address: addrs.reserveVerifier,
+            abi: RESERVE_ABI,
+            functionName: 'getProjectVerification',
+            args: [PROJECT_ID],
+          }).catch(() => null),
+          client.readContract({
+            address: addrs.reserveVerifier,
+            abi: RESERVE_ABI,
+            functionName: 'getEngineVerification',
+          }).catch(() => null),
+          client.getBalance({ address: addrs.fundingEngine }),
+        ])
+
+        if (projectVerification) {
+          const pv = projectVerification as readonly [bigint, bigint, bigint, number, bigint, bigint]
+          reserves = {
+            ...reserves,
+            project: {
+              porReported: Number(pv[0]),
+              onchainBalance: Number(pv[1]),
+              claimed: Number(pv[2]),
+              status: pv[3],
+              reserveRatio: Number(pv[4]),
+              timestamp: Number(pv[5]),
+            },
+          }
+        }
+
+        if (engineVerification) {
+          const ev = engineVerification as readonly [string, bigint, bigint, number, bigint]
+          reserves = {
+            ...reserves,
+            engine: {
+              contractBalance: Number(formatEther(ev[1])),
+              reportedDeposits: Number(formatEther(ev[2])),
+              status: ev[3],
+              timestamp: Number(ev[4]),
+            },
+          }
+        } else {
+          // Fallback: derive from balance
+          const bal = Number(formatEther(engineBalance))
+          const totalDeposited = rounds.reduce((sum, r) => sum + r.totalDeposited, 0)
+          reserves = {
+            ...reserves,
+            engine: {
+              contractBalance: bal,
+              reportedDeposits: totalDeposited,
+              status: bal >= totalDeposited ? 1 : 2,
+              timestamp: Math.floor(Date.now() / 1000),
+            },
+          }
         }
       } catch {
         // Keep demo reserve data
+      }
+
+      // Fetch ETH/USD price from Chainlink Data Feed
+      let ethPrice = 0
+      if (addrs.priceFeed && addrs.priceFeed !== '0x0000000000000000000000000000000000000000') {
+        try {
+          const [priceResult, decimalsResult] = await Promise.all([
+            client.readContract({
+              address: addrs.priceFeed,
+              abi: PRICE_FEED_ABI,
+              functionName: 'latestRoundData',
+            }),
+            client.readContract({
+              address: addrs.priceFeed,
+              abi: PRICE_FEED_ABI,
+              functionName: 'decimals',
+            }),
+          ])
+          const priceData = priceResult as readonly [bigint, bigint, bigint, bigint, bigint]
+          const decimals = decimalsResult as number
+          ethPrice = Number(priceData[1]) / 10 ** decimals
+        } catch {
+          // Price feed unavailable — leave at 0
+        }
       }
 
       setData({
@@ -307,14 +377,24 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
         milestones,
         rounds,
         reserves,
+        ethPrice,
         isLive: true,
         lastUpdated: Date.now(),
         error: null,
       })
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      let friendly = msg
+      if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+        friendly = 'Cannot connect to RPC — is Anvil running? (anvil --host 127.0.0.1)'
+      } else if (msg.includes('execution reverted')) {
+        friendly = 'Contract call reverted — click "Deploy & Setup" first'
+      } else if (msg.includes('could not be found')) {
+        friendly = 'Contract not found at address — redeploy via Setup'
+      }
       setData((prev) => ({
         ...prev,
-        error: err instanceof Error ? err.message : 'Failed to fetch contract data',
+        error: friendly,
       }))
     }
   }, [])

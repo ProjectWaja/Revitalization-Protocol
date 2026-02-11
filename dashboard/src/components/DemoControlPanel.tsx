@@ -8,6 +8,7 @@ interface DemoAddresses {
   milestoneConsumer: Address
   fundingEngine: Address
   reserveVerifier: Address
+  priceFeed?: Address
 }
 
 interface Props {
@@ -37,6 +38,11 @@ export function DemoControlPanel({ onRefresh, onAddressesChange, addresses }: Pr
   const [investStatus, setInvestStatus] = useState<Status>('idle')
   const [rescueStatus, setRescueStatus] = useState<Status>('idle')
   const [reserveStatus, setReserveStatus] = useState<Status>('idle')
+  const [ethPrice, setEthPrice] = useState('2500')
+  const [priceStatus, setPriceStatus] = useState<Status>('idle')
+  const [workflowType, setWorkflowType] = useState<'all' | 'solvency' | 'milestone' | 'funding'>('all')
+  const [workflowStatus, setWorkflowStatus] = useState<Status>('idle')
+  const [workflowSteps, setWorkflowSteps] = useState<{ step: string; result: string }[]>([])
   const [message, setMessage] = useState<string | null>(null)
 
   const showMessage = useCallback((msg: string) => {
@@ -76,6 +82,15 @@ export function DemoControlPanel({ onRefresh, onAddressesChange, addresses }: Pr
   const handleInvest = () => callApi('invest', { roundId: Number(investRound), amount: investAmount, engineAddress: addresses?.fundingEngine }, setInvestStatus)
   const handleRescue = () => callApi('rescue', { solvencyAddress: addresses?.solvencyConsumer }, setRescueStatus)
   const handleReserves = () => callApi('reserves', { reserveAddress: addresses?.reserveVerifier, engineAddress: addresses?.fundingEngine }, setReserveStatus)
+  const handlePrice = () => callApi('price', { price: Number(ethPrice), priceFeedAddress: addresses?.priceFeed }, setPriceStatus)
+  const handleWorkflow = async () => {
+    setWorkflowSteps([])
+    const data = await callApi('workflow', { workflow: workflowType, addresses }, setWorkflowStatus)
+    if (data?.steps) {
+      setWorkflowSteps(data.steps)
+      showMessage(`CRE workflow completed: ${data.steps.length} steps in ${data.totalDuration}ms`)
+    }
+  }
 
   const isSetUp = !!addresses
 
@@ -130,7 +145,7 @@ export function DemoControlPanel({ onRefresh, onAddressesChange, addresses }: Pr
           )}
 
           {/* Control Grid */}
-          {isSetUp && (
+          {isSetUp && (<>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {/* Solvency */}
               <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-3">
@@ -245,8 +260,69 @@ export function DemoControlPanel({ onRefresh, onAddressesChange, addresses }: Pr
                   </button>
                 </div>
               </div>
+
+              {/* ETH/USD Price Feed */}
+              <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-3">
+                <h3 className="text-sm font-medium">Update ETH/USD Price</h3>
+                <p className="text-xs text-gray-400">Chainlink Data Feed (MockV3Aggregator)</p>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500">USD per ETH</label>
+                    <input type="number" min={1} step={100} value={ethPrice} onChange={(e) => setEthPrice(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm font-mono" />
+                  </div>
+                  <button onClick={handlePrice} disabled={priceStatus === 'loading' || !addresses?.priceFeed}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 rounded text-xs font-medium transition-colors">
+                    <StatusDot status={priceStatus} />
+                    Update
+                  </button>
+                </div>
+                <div className="flex gap-1">
+                  {[1500, 2500, 4000, 8000].map((p) => (
+                    <button key={p} onClick={() => setEthPrice(String(p))}
+                      className="px-2 py-0.5 text-[10px] bg-gray-700/50 hover:bg-gray-700 rounded transition-colors">
+                      ${p.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* CRE Workflow Simulation */}
+            <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-blue-300">Simulate CRE Workflow</h3>
+                  <p className="text-xs text-gray-400 mt-1">Run multi-step oracle pipeline: fetch → compute → write onchain</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select value={workflowType} onChange={(e) => setWorkflowType(e.target.value as typeof workflowType)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs">
+                    <option value="all">All 3 Workflows</option>
+                    <option value="solvency">Solvency Oracle</option>
+                    <option value="milestone">Milestone Oracle</option>
+                    <option value="funding">Funding Engine</option>
+                  </select>
+                  <button onClick={handleWorkflow} disabled={workflowStatus === 'loading'}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 rounded text-xs font-medium transition-colors">
+                    <StatusDot status={workflowStatus} />
+                    {workflowStatus === 'loading' ? 'Running...' : 'Execute'}
+                  </button>
+                </div>
+              </div>
+              {workflowSteps.length > 0 && (
+                <div className="space-y-1 mt-2 bg-gray-900/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                  {workflowSteps.map((s, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <span className="text-green-400 flex-shrink-0">&#10003;</span>
+                      <span className="text-gray-400">{s.step}</span>
+                      <span className="text-gray-600 ml-auto flex-shrink-0">{s.result}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>)}
         </div>
       )}
     </div>
