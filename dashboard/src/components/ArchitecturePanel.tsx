@@ -20,19 +20,19 @@ export function ArchitecturePanel() {
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-      <h2 className="text-xl font-semibold mb-6">Architecture Overview</h2>
+      <h2 className="text-2xl font-semibold mb-6">Architecture Overview</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Chainlink Services */}
         <div>
-          <h3 className="text-sm font-medium text-gray-400 mb-4">Chainlink Services Used</h3>
-          <div className="space-y-3">
+          <h3 className="text-lg font-medium text-gray-400 mb-4">Chainlink Services Used</h3>
+          <div className="space-y-4">
             {services.map((s) => (
               <div key={s.name} className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${s.color} flex-shrink-0`} />
+                <div className={`w-3 h-3 rounded-full ${s.color} flex-shrink-0`} />
                 <div>
-                  <div className="text-sm font-medium">{s.name}</div>
-                  <div className="text-xs text-gray-500">{s.desc}</div>
+                  <div className="text-lg font-medium">{s.name}</div>
+                  <div className="text-base text-gray-500">{s.desc}</div>
                 </div>
               </div>
             ))}
@@ -41,14 +41,14 @@ export function ArchitecturePanel() {
 
         {/* Smart Contracts */}
         <div>
-          <h3 className="text-sm font-medium text-gray-400 mb-4">Smart Contracts (Sepolia)</h3>
-          <div className="space-y-3">
+          <h3 className="text-lg font-medium text-gray-400 mb-4">Smart Contracts (Sepolia)</h3>
+          <div className="space-y-4">
             {contracts.map((c) => (
               <div key={c.name} className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-gray-500 mt-1.5 flex-shrink-0" />
+                <div className="w-3 h-3 rounded-full bg-gray-500 mt-1.5 flex-shrink-0" />
                 <div>
-                  <div className="text-sm font-mono">{c.name}</div>
-                  <div className="text-xs text-gray-500">{c.desc}</div>
+                  <div className="text-lg font-mono">{c.name}</div>
+                  <div className="text-base text-gray-500">{c.desc}</div>
                 </div>
               </div>
             ))}
@@ -58,8 +58,8 @@ export function ArchitecturePanel() {
 
       {/* Data Flow */}
       <div className="mt-8 pt-6 border-t border-gray-800">
-        <h3 className="text-sm font-medium text-gray-400 mb-4">Cross-Module Data Flow</h3>
-        <div className="bg-gray-800/50 rounded-lg p-4 font-mono text-xs text-gray-300 space-y-1 overflow-x-auto">
+        <h3 className="text-lg font-medium text-gray-400 mb-4">Cross-Module Data Flow</h3>
+        <div className="bg-gray-800/50 rounded-lg p-5 font-mono text-base text-gray-300 space-y-2 overflow-x-auto">
           <div>SolvencyOracle --CRE--{'>'} SolvencyConsumer --initiateRescueFunding()--{'>'} FundingEngine</div>
           <div>MilestoneOracle --CRE--{'>'} MilestoneConsumer --releaseTranche()-------{'>'} FundingEngine</div>
           <div>FundingWorkflow --CRE--{'>'} reads all 3 contracts + rule-based scoring ---{'>'} Report</div>
@@ -68,7 +68,7 @@ export function ArchitecturePanel() {
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500 text-center">
+      <div className="mt-4 pt-4 border-t border-gray-800 text-base text-gray-500 text-center">
         Chainlink Convergence 2026 Hackathon — DeFi & Tokenization | Risk & Compliance | CRE & AI | Privacy
       </div>
     </div>

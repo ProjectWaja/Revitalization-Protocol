@@ -63,56 +63,48 @@ export default function Dashboard() {
       {/* Tab Navigation */}
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* Tab Content */}
+      {/* Tab Content — all tabs stay mounted to preserve state */}
       <div className="pt-2">
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <OceanwideScenarioPanel
-              addresses={addresses}
-              onRefresh={refresh}
-              onAddressesChange={setAddresses}
-            />
-            <MetricsSummary data={data} />
-            <details className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-              <summary className="px-6 py-4 cursor-pointer text-sm text-gray-400 hover:text-gray-300 transition-colors select-none">
-                Advanced Controls (manual contract interactions)
-              </summary>
-              <div className="px-6 pb-6">
-                <DemoControlPanel
-                  onRefresh={refresh}
-                  onAddressesChange={setAddresses}
-                  addresses={addresses}
-                />
-              </div>
-            </details>
-          </div>
-        )}
+        <div className={activeTab === 'overview' ? 'space-y-6' : 'hidden'}>
+          <OceanwideScenarioPanel
+            addresses={addresses}
+            onRefresh={refresh}
+            onAddressesChange={setAddresses}
+          />
+          <MetricsSummary data={data} />
+          <details className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+            <summary className="px-6 py-4 cursor-pointer text-sm text-gray-400 hover:text-gray-300 transition-colors select-none">
+              Advanced Controls (manual contract interactions)
+            </summary>
+            <div className="px-6 pb-6">
+              <DemoControlPanel
+                onRefresh={refresh}
+                onAddressesChange={setAddresses}
+                addresses={addresses}
+              />
+            </div>
+          </details>
+        </div>
 
-        {activeTab === 'oracles' && (
-          <div className="space-y-6">
-            <SolvencyPanel data={data.solvency} />
-            <MilestonePanel milestones={data.milestones} />
-          </div>
-        )}
+        <div className={activeTab === 'oracles' ? 'space-y-6' : 'hidden'}>
+          <SolvencyPanel data={data.solvency} />
+          <MilestonePanel milestones={data.milestones} />
+        </div>
 
-        {activeTab === 'funding' && (
-          <div className="space-y-6">
-            <FundingPanel rounds={data.rounds} ethPrice={data.ethPrice} />
-            <ReservePanel data={data.reserves} ethPrice={data.ethPrice} />
-          </div>
-        )}
+        <div className={activeTab === 'funding' ? 'space-y-6' : 'hidden'}>
+          <FundingPanel rounds={data.rounds} ethPrice={data.ethPrice} />
+          <ReservePanel data={data.reserves} ethPrice={data.ethPrice} />
+        </div>
 
-        {activeTab === 'architecture' && (
-          <div className="space-y-6">
-            <ArchitecturePanel />
-            <WorkflowPanel data={data} />
-            <ConfidentialComputePanel
-              confidentialAddress={ccAddress}
-              onDeploy={setCcAddress}
-              onRefresh={refresh}
-            />
-          </div>
-        )}
+        <div className={activeTab === 'architecture' ? 'space-y-6' : 'hidden'}>
+          <ArchitecturePanel />
+          <WorkflowPanel data={data} />
+          <ConfidentialComputePanel
+            confidentialAddress={ccAddress}
+            onDeploy={setCcAddress}
+            onRefresh={refresh}
+          />
+        </div>
       </div>
     </div>
   )
