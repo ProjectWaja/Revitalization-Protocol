@@ -11,24 +11,24 @@ export function MilestonePanel({ milestones }: { milestones: MilestoneData[] }) 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">Milestone Oracle</h2>
-        <span className="text-sm text-gray-400">Satellite + Drone + Permit Verification</span>
+        <h2 className="text-2xl font-semibold">Milestone Oracle</h2>
+        <span className="text-lg text-gray-400">Satellite + Drone + Permit Verification</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {milestones.map((m) => (
-          <div key={m.id} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+          <div key={m.id} className="bg-gray-800/50 rounded-lg p-5 border border-gray-700/50">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-400">Milestone {m.id}</span>
-              <span className={`text-sm font-medium ${STATUS_COLORS[m.status] ?? 'text-gray-500'}`}>
+              <span className="text-base text-gray-400">Milestone {m.id}</span>
+              <span className={`text-base font-medium ${STATUS_COLORS[m.status] ?? 'text-gray-500'}`}>
                 {m.status.replace('_', ' ')}
               </span>
             </div>
-            <h3 className="text-base font-medium mb-3">{m.name}</h3>
+            <h3 className="text-lg font-medium mb-3">{m.name}</h3>
 
             {/* Progress bar */}
             <div className="space-y-1 mb-3">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-base">
                 <span className="text-gray-400">Progress</span>
                 <span className="font-mono">{m.progress}%</span>
               </div>
@@ -44,7 +44,7 @@ export function MilestonePanel({ milestones }: { milestones: MilestoneData[] }) 
 
             {/* Score */}
             {m.score > 0 && (
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-base">
                 <span className="text-gray-400">Verification</span>
                 <span className={`font-mono ${m.score >= 70 ? 'text-green-400' : 'text-yellow-400'}`}>
                   {m.score}/100
@@ -54,8 +54,8 @@ export function MilestonePanel({ milestones }: { milestones: MilestoneData[] }) 
 
             {/* Tranche indicator */}
             <div className="mt-3 pt-3 border-t border-gray-700">
-              <div className="flex items-center gap-2 text-sm">
-                <div className={`w-2 h-2 rounded-full ${m.approved && m.progress === 100 ? 'bg-green-500' : 'bg-gray-600'}`} />
+              <div className="flex items-center gap-2 text-base">
+                <div className={`w-2.5 h-2.5 rounded-full ${m.approved && m.progress === 100 ? 'bg-green-500' : 'bg-gray-600'}`} />
                 <span className="text-gray-400">
                   Tranche: {m.approved && m.progress === 100 ? 'Released' : 'Locked'}
                 </span>
@@ -65,7 +65,7 @@ export function MilestonePanel({ milestones }: { milestones: MilestoneData[] }) 
         ))}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-sm text-gray-500">
+      <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-base text-gray-500">
         <span>{milestones.length} milestones configured</span>
         <span>Chainlink CRE (Rule-Based Verification)</span>
       </div>
