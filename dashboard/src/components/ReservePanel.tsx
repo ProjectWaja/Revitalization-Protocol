@@ -60,24 +60,24 @@ export function ReservePanel({ data, ethPrice = 0 }: { data: ReserveData; ethPri
       {/* Project Reserves */}
       <div className="space-y-4 mb-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-400">Project Reserve Verification</h3>
+          <h3 className="text-base font-medium text-gray-400">Project Reserve Verification</h3>
           <VerificationBadge status={projectStatus} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-800/50 rounded-lg p-3">
-            <div className="text-gray-400 text-xs">Claimed Reserves</div>
+            <div className="text-gray-400 text-sm">Claimed Reserves</div>
             <div className="text-lg font-bold font-mono">${(pr.claimed / 1e6).toFixed(0)}M</div>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-3">
-            <div className="text-gray-400 text-xs">PoR Verified</div>
+            <div className="text-gray-400 text-sm">PoR Verified</div>
             <div className="text-lg font-bold font-mono">${(pr.porReported / 1e6).toFixed(1)}M</div>
           </div>
         </div>
 
         {/* Reserve Ratio Bar */}
         <div className="space-y-1">
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-base">
             <span className="text-gray-400">Reserve Ratio</span>
             <span className={`font-mono ${pr.reserveRatio >= 8000 ? 'text-green-400' : 'text-red-400'}`}>
               {(pr.reserveRatio / 100).toFixed(0)}%
@@ -91,30 +91,30 @@ export function ReservePanel({ data, ethPrice = 0 }: { data: ReserveData; ethPri
             {/* 80% threshold marker */}
             <div className="absolute top-0 left-[80%] w-0.5 h-full bg-yellow-400/50" />
           </div>
-          <div className="text-xs text-gray-500 text-right">Min threshold: 80%</div>
+          <div className="text-sm text-gray-500 text-right">Min threshold: 80%</div>
         </div>
       </div>
 
       {/* Funding Engine Reserves */}
       <div className="space-y-4 pt-4 border-t border-gray-800">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-400">Funding Engine Verification</h3>
+          <h3 className="text-base font-medium text-gray-400">Funding Engine Verification</h3>
           <VerificationBadge status={engineStatus} />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-gray-800/50 rounded-lg p-3">
-            <div className="text-gray-400 text-xs">On-Chain Balance</div>
+            <div className="text-gray-400 text-sm">On-Chain Balance</div>
             <div className="text-lg font-bold font-mono">{er.contractBalance.toFixed(2)} ETH</div>
-            {ethPrice > 0 && <div className="text-xs text-gray-500 font-mono">{formatUsd(er.contractBalance, ethPrice)}</div>}
+            {ethPrice > 0 && <div className="text-sm text-gray-500 font-mono">{formatUsd(er.contractBalance, ethPrice)}</div>}
           </div>
           <div className="bg-gray-800/50 rounded-lg p-3">
-            <div className="text-gray-400 text-xs">Reported Deposits</div>
+            <div className="text-gray-400 text-sm">Reported Deposits</div>
             <div className="text-lg font-bold font-mono">{er.reportedDeposits.toFixed(2)} ETH</div>
-            {ethPrice > 0 && <div className="text-xs text-gray-500 font-mono">{formatUsd(er.reportedDeposits, ethPrice)}</div>}
+            {ethPrice > 0 && <div className="text-sm text-gray-500 font-mono">{formatUsd(er.reportedDeposits, ethPrice)}</div>}
           </div>
           <div className="bg-gray-800/50 rounded-lg p-3">
-            <div className="text-gray-400 text-xs">Coverage</div>
+            <div className="text-gray-400 text-sm">Coverage</div>
             <div className={`text-lg font-bold ${coverageRatio >= 100 ? 'text-green-400' : 'text-red-400'}`}>
               {er.reportedDeposits > 0 ? `${coverageRatio.toFixed(0)}%` : '--'}
             </div>
@@ -124,9 +124,9 @@ export function ReservePanel({ data, ethPrice = 0 }: { data: ReserveData; ethPri
         {/* Engine coverage bar */}
         {er.reportedDeposits > 0 && (
           <div className="space-y-1">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-base">
               <span className="text-gray-400">Balance vs Deposits</span>
-              <span className={`font-mono text-xs ${coverageRatio >= 100 ? 'text-green-400' : 'text-red-400'}`}>
+              <span className={`font-mono text-sm ${coverageRatio >= 100 ? 'text-green-400' : 'text-red-400'}`}>
                 {coverageRatio >= 100 ? 'Fully Collateralized' : 'Under-Collateralized'}
               </span>
             </div>
@@ -143,7 +143,7 @@ export function ReservePanel({ data, ethPrice = 0 }: { data: ReserveData; ethPri
 
       {/* Verification Timestamps */}
       <div className="mt-4 pt-4 border-t border-gray-800">
-        <div className="grid grid-cols-2 gap-3 text-xs text-gray-500">
+        <div className="grid grid-cols-2 gap-3 text-sm text-gray-500">
           <div>
             <span className="text-gray-600">Project PoR: </span>
             {pr.timestamp > 0 ? new Date(pr.timestamp * 1000).toLocaleTimeString() : 'Not verified'}
@@ -153,7 +153,7 @@ export function ReservePanel({ data, ethPrice = 0 }: { data: ReserveData; ethPri
             {er.timestamp > 0 ? new Date(er.timestamp * 1000).toLocaleTimeString() : 'Not verified'}
           </div>
         </div>
-        <div className="flex justify-between text-xs text-gray-500 mt-2">
+        <div className="flex justify-between text-sm text-gray-500 mt-2">
           <span>Chainlink Automation (4h interval)</span>
           <span>PoR + Data Feeds{ethPrice > 0 && ` (ETH $${ethPrice.toLocaleString()})`}</span>
         </div>

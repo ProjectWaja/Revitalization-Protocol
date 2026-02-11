@@ -74,9 +74,9 @@ function WorkflowCard({ workflow, lastTimestamp }: { workflow: WorkflowDef; last
           <h3 className="text-sm font-semibold">{workflow.name}</h3>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 font-mono">{workflow.schedule}</span>
+          <span className="text-sm text-gray-500 font-mono">{workflow.schedule}</span>
           {isActive && (
-            <span className="text-xs text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">Active</span>
+            <span className="text-sm text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">Active</span>
           )}
         </div>
       </div>
@@ -84,7 +84,7 @@ function WorkflowCard({ workflow, lastTimestamp }: { workflow: WorkflowDef; last
       {/* Services */}
       <div className="flex flex-wrap gap-1.5">
         {workflow.services.map((s) => (
-          <span key={s} className="text-[10px] px-1.5 py-0.5 bg-gray-700/50 text-gray-400 rounded">
+          <span key={s} className="text-xs px-1.5 py-0.5 bg-gray-700/50 text-gray-400 rounded">
             {s}
           </span>
         ))}
@@ -93,7 +93,7 @@ function WorkflowCard({ workflow, lastTimestamp }: { workflow: WorkflowDef; last
       {/* Pipeline Steps */}
       <div className="space-y-1">
         {workflow.steps.map((step, i) => (
-          <div key={i} className="flex items-start gap-2 text-xs">
+          <div key={i} className="flex items-start gap-2 text-sm">
             <span className="text-gray-600 font-mono w-4 text-right flex-shrink-0">{i + 1}.</span>
             <span className="text-gray-400">{step}</span>
           </div>
@@ -102,10 +102,10 @@ function WorkflowCard({ workflow, lastTimestamp }: { workflow: WorkflowDef; last
 
       {/* Target + Timing */}
       <div className="flex items-center justify-between pt-2 border-t border-gray-700/30">
-        <span className="text-xs text-gray-500">
+        <span className="text-sm text-gray-500">
           Target: <span className="font-mono text-gray-400">{workflow.target}</span>
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-sm text-gray-500">
           {timeSince >= 0 ? `${timeSince}m ago` : 'No data yet'}
         </span>
       </div>
@@ -129,10 +129,10 @@ export function WorkflowPanel({ data }: { data: DashboardData }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold">CRE Workflow Monitor</h2>
-          <p className="text-xs text-gray-500 mt-1">Chainlink Runtime Environment — Multi-Step Oracle Pipelines</p>
+          <p className="text-sm text-gray-500 mt-1">Chainlink Runtime Environment — Multi-Step Oracle Pipelines</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">
+          <span className="text-sm text-gray-500">
             {timestamps.filter((t) => t > 0).length}/3 active
           </span>
         </div>
@@ -150,21 +150,21 @@ export function WorkflowPanel({ data }: { data: DashboardData }) {
         <h3 className="text-sm font-medium text-gray-400 mb-3">CRE Consensus Strategies</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="bg-gray-800/30 rounded-lg p-3">
-            <div className="text-xs font-medium text-blue-400">Median Aggregation</div>
-            <div className="text-xs text-gray-500 mt-1">Numeric fields (costs, scores) — outlier-resistant</div>
+            <div className="text-sm font-medium text-blue-400">Median Aggregation</div>
+            <div className="text-sm text-gray-500 mt-1">Numeric fields (costs, scores) — outlier-resistant</div>
           </div>
           <div className="bg-gray-800/30 rounded-lg p-3">
-            <div className="text-xs font-medium text-green-400">Identical Consensus</div>
-            <div className="text-xs text-gray-500 mt-1">Structured data (AI JSON, permits) — exact match</div>
+            <div className="text-sm font-medium text-green-400">Identical Consensus</div>
+            <div className="text-sm text-gray-500 mt-1">Structured data (AI JSON, permits) — exact match</div>
           </div>
           <div className="bg-gray-800/30 rounded-lg p-3">
-            <div className="text-xs font-medium text-purple-400">DON Mode (BFT)</div>
-            <div className="text-xs text-gray-500 mt-1">On-chain reads — Byzantine fault tolerant</div>
+            <div className="text-sm font-medium text-purple-400">DON Mode (BFT)</div>
+            <div className="text-sm text-gray-500 mt-1">On-chain reads — Byzantine fault tolerant</div>
           </div>
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500 text-center">
+      <div className="mt-4 pt-4 border-t border-gray-800 text-sm text-gray-500 text-center">
         3 CRE Workflows — Compiled to WASM — Executed on Chainlink DON
       </div>
     </div>

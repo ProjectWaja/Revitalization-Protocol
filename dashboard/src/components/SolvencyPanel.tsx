@@ -17,7 +17,7 @@ const RISK_COLORS = {
 function ScoreBar({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-sm">
+      <div className="flex justify-between text-base">
         <span className="text-gray-400">{label}</span>
         <span className="font-mono">{value}</span>
       </div>
@@ -57,7 +57,7 @@ export function SolvencyPanel({ data }: { data: SolvencyData }) {
             <span className="text-2xl font-bold font-mono">{d.overallScore}</span>
           </div>
         </div>
-        <div className="space-y-1 text-sm">
+        <div className="space-y-1 text-base">
           <div className="text-gray-400">Budget: <span className="text-white">${formatFinancial(d.financials.totalBudget)}</span></div>
           <div className="text-gray-400">Deployed: <span className="text-white">${formatFinancial(d.financials.capitalDeployed)}</span></div>
           <div className="text-gray-400">Remaining: <span className="text-white">${formatFinancial(d.financials.capitalRemaining)}</span></div>
@@ -73,7 +73,7 @@ export function SolvencyPanel({ data }: { data: SolvencyData }) {
         <ScoreBar label="Runway Adequacy" value={d.runwayAdequacy} color="bg-emerald-500" />
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-xs text-gray-500">
+      <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-sm text-gray-500">
         <span>Updated {d.timestamp > 0 ? `${Math.floor((Date.now() / 1000 - d.timestamp) / 60)}m ago` : '--'}</span>
         <span>Chainlink CRE + AI</span>
       </div>

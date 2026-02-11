@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+/* Chain Reaction Flow Diagram Animations */
+@keyframes node-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--glow-color)); }
+  50% { filter: drop-shadow(0 0 14px var(--glow-color)); }
+}
+
+@keyframes edge-flow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes node-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}

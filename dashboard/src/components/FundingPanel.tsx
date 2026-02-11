@@ -27,15 +27,15 @@ function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) 
     <div className="bg-gray-800/30 rounded-lg p-5 border border-gray-700/50">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-medium">Round #{round.roundId}</h3>
-          <span className="text-xs text-gray-500">{round.roundType}</span>
+          <h3 className="text-base font-medium">Round #{round.roundId}</h3>
+          <span className="text-sm text-gray-500">{round.roundType}</span>
           {round.roundType === 'RESCUE' && round.rescuePremiumBps > 0 && (
-            <span className="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+            <span className="text-sm font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
               +{(round.rescuePremiumBps / 100).toFixed(0)}% Bonus
             </span>
           )}
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[status]}`}>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[status]}`}>
           {status}
         </span>
       </div>
@@ -43,8 +43,8 @@ function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) 
       {/* Premium Pool Info */}
       {round.roundType === 'RESCUE' && round.rescuePremiumBps > 0 && round.premiumPool > 0 && (
         <div className="mb-4 bg-amber-400/5 border border-amber-400/20 rounded-lg p-3 flex items-center justify-between">
-          <span className="text-xs text-amber-300">Rescue Premium Pool</span>
-          <span className="text-sm font-mono text-amber-400">{round.premiumPool.toFixed(2)} ETH</span>
+          <span className="text-sm text-amber-300">Rescue Premium Pool</span>
+          <span className="text-base font-mono text-amber-400">{round.premiumPool.toFixed(2)} ETH</span>
         </div>
       )}
 
@@ -53,7 +53,7 @@ function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) 
         <div className="space-y-4">
           <div className="space-y-3">
             <div>
-              <div className="flex justify-between text-sm mb-1">
+              <div className="flex justify-between text-base mb-1">
                 <span className="text-gray-400">Funding Progress</span>
                 <span className="font-mono">
                   {round.totalDeposited.toFixed(1)}/{round.targetAmount.toFixed(1)} ETH
@@ -66,7 +66,7 @@ function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) 
             </div>
 
             <div>
-              <div className="flex justify-between text-sm mb-1">
+              <div className="flex justify-between text-base mb-1">
                 <span className="text-gray-400">Tranche Release</span>
                 <span className="font-mono">
                   {round.totalReleased.toFixed(1)}/{round.totalDeposited.toFixed(1)} ETH
@@ -79,13 +79,13 @@ function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 text-base">
             <div className="bg-gray-800/50 rounded-lg p-3">
-              <div className="text-gray-400 text-xs">Investors</div>
+              <div className="text-gray-400 text-sm">Investors</div>
               <div className="text-xl font-bold font-mono">{round.investorCount}</div>
             </div>
             <div className="bg-gray-800/50 rounded-lg p-3">
-              <div className="text-gray-400 text-xs">Days Left</div>
+              <div className="text-gray-400 text-sm">Days Left</div>
               <div className="text-xl font-bold font-mono">{daysLeft}</div>
             </div>
           </div>
@@ -93,16 +93,16 @@ function RoundCard({ round, ethPrice }: { round: RoundData; ethPrice: number }) 
 
         {/* Tranche Schedule */}
         <div className="space-y-4 lg:col-span-2">
-          <h4 className="text-sm font-medium text-gray-400">Tranche Schedule</h4>
+          <h4 className="text-base font-medium text-gray-400">Tranche Schedule</h4>
           <div className="space-y-2">
             {round.tranches.map((t, i) => (
               <div key={i} className="flex items-center gap-3 bg-gray-800/50 rounded-lg p-3">
                 <div className={`w-3 h-3 rounded-full flex-shrink-0 ${t.released ? 'bg-green-500' : 'bg-gray-600'}`} />
-                <div className="flex-1 text-sm">
+                <div className="flex-1 text-base">
                   <span className="text-gray-300">Milestone {t.milestoneId}</span>
                 </div>
-                <div className="text-sm font-mono text-gray-400">{(t.basisPoints / 100).toFixed(0)}%</div>
-                <span className={`text-xs ${t.released ? 'text-green-400' : 'text-gray-500'}`}>
+                <div className="text-base font-mono text-gray-400">{(t.basisPoints / 100).toFixed(0)}%</div>
+                <span className={`text-sm ${t.released ? 'text-green-400' : 'text-gray-500'}`}>
                   {t.released ? 'Released' : 'Locked'}
                 </span>
               </div>
@@ -121,7 +121,7 @@ export function FundingPanel({ rounds, ethPrice = 0 }: { rounds: RoundData[]; et
         <div>
           <h2 className="text-xl font-semibold">Tokenized Funding Engine</h2>
           {ethPrice > 0 && (
-            <span className="text-xs text-gray-500">ETH/USD: ${ethPrice.toLocaleString()} via Chainlink Data Feed</span>
+            <span className="text-sm text-gray-500">ETH/USD: ${ethPrice.toLocaleString()} via Chainlink Data Feed</span>
           )}
         </div>
         <span className="text-sm text-gray-400">{rounds.length} round{rounds.length !== 1 ? 's' : ''}</span>
@@ -136,7 +136,7 @@ export function FundingPanel({ rounds, ethPrice = 0 }: { rounds: RoundData[]; et
         )}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-xs text-gray-500">
+      <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between text-sm text-gray-500">
         <span>ERC-1155 Position Tokens</span>
         <span>Chainlink Data Feeds + CCIP</span>
       </div>

@@ -10,15 +10,18 @@ import { WorkflowPanel } from '@/components/WorkflowPanel'
 import { ConfidentialComputePanel } from '@/components/ConfidentialComputePanel'
 import { DemoControlPanel } from '@/components/DemoControlPanel'
 import { OceanwideScenarioPanel } from '@/components/OceanwideScenarioPanel'
+import { TabNavigation } from '@/components/TabNavigation'
+import { MetricsSummary } from '@/components/MetricsSummary'
 import { useContractData, type ContractAddresses } from '@/hooks/useContractData'
 
 export default function Dashboard() {
   const [addresses, setAddresses] = useState<ContractAddresses | null>(null)
   const [ccAddress, setCcAddress] = useState<string | null>(null)
   const { data, refresh } = useContractData(addresses)
+  const [activeTab, setActiveTab] = useState('overview')
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -29,18 +32,18 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {data.isLive ? (
-            <span className="flex items-center gap-2 text-xs text-green-400 bg-green-400/10 px-3 py-1 rounded-full">
+            <span className="flex items-center gap-2 text-sm text-green-400 bg-green-400/10 px-3 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               Live
             </span>
           ) : (
-            <span className="flex items-center gap-2 text-xs text-gray-400 bg-gray-400/10 px-3 py-1 rounded-full">
+            <span className="flex items-center gap-2 text-sm text-gray-400 bg-gray-400/10 px-3 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-gray-400" />
               Waiting for Setup
             </span>
           )}
           {data.ethPrice > 0 && (
-            <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded font-mono">
+            <span className="text-sm text-gray-500 bg-gray-800 px-3 py-1 rounded font-mono">
               ETH ${data.ethPrice.toLocaleString()}
             </span>
           )}
@@ -57,51 +60,60 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Oceanwide Plaza Scenario Demo */}
-      <OceanwideScenarioPanel
-        addresses={addresses}
-        onRefresh={refresh}
-        onAddressesChange={setAddresses}
-      />
+      {/* Tab Navigation */}
+      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* Top Row: Solvency + Reserves */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SolvencyPanel data={data.solvency} />
-        <ReservePanel data={data.reserves} ethPrice={data.ethPrice} />
+      {/* Tab Content */}
+      <div className="pt-2">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <OceanwideScenarioPanel
+              addresses={addresses}
+              onRefresh={refresh}
+              onAddressesChange={setAddresses}
+            />
+            <MetricsSummary data={data} />
+            <details className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+              <summary className="px-6 py-4 cursor-pointer text-sm text-gray-400 hover:text-gray-300 transition-colors select-none">
+                Advanced Controls (manual contract interactions)
+              </summary>
+              <div className="px-6 pb-6">
+                <DemoControlPanel
+                  onRefresh={refresh}
+                  onAddressesChange={setAddresses}
+                  addresses={addresses}
+                />
+              </div>
+            </details>
+          </div>
+        )}
+
+        {activeTab === 'oracles' && (
+          <div className="space-y-6">
+            <SolvencyPanel data={data.solvency} />
+            <MilestonePanel milestones={data.milestones} />
+          </div>
+        )}
+
+        {activeTab === 'funding' && (
+          <div className="space-y-6">
+            <FundingPanel rounds={data.rounds} ethPrice={data.ethPrice} />
+            <ReservePanel data={data.reserves} ethPrice={data.ethPrice} />
+          </div>
+        )}
+
+        {activeTab === 'architecture' && (
+          <div className="space-y-6">
+            <ArchitecturePanel />
+            <WorkflowPanel data={data} />
+            <ConfidentialComputePanel
+              confidentialAddress={ccAddress}
+              onDeploy={setCcAddress}
+              onRefresh={refresh}
+            />
+          </div>
+        )}
       </div>
-
-      {/* Middle Row: Milestones */}
-      <MilestonePanel milestones={data.milestones} />
-
-      {/* Bottom Row: Funding */}
-      <FundingPanel rounds={data.rounds} ethPrice={data.ethPrice} />
-
-      {/* Confidential Compute */}
-      <ConfidentialComputePanel
-        confidentialAddress={ccAddress}
-        onDeploy={setCcAddress}
-        onRefresh={refresh}
-      />
-
-      {/* CRE Workflow Monitor */}
-      <WorkflowPanel data={data} />
-
-      {/* Architecture Overview */}
-      <ArchitecturePanel />
-
-      {/* Advanced Controls */}
-      <details className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-        <summary className="px-6 py-4 cursor-pointer text-sm text-gray-400 hover:text-gray-300 transition-colors select-none">
-          Advanced Controls (manual contract interactions)
-        </summary>
-        <div className="px-6 pb-6">
-          <DemoControlPanel
-            onRefresh={refresh}
-            onAddressesChange={setAddresses}
-            addresses={addresses}
-          />
-        </div>
-      </details>
     </div>
   )
 }

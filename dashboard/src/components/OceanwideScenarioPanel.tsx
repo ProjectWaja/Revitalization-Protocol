@@ -2,13 +2,9 @@
 
 import { useState, useCallback } from 'react'
 import { STAGES, type VariantKey, type ScenarioVariant } from '@/lib/scenario-definitions'
+import { CONTRACT_COLORS, CONTRACT_SHORT, type ContractName, type DecodedEvent, type EnrichedStep } from '@/lib/chain-events'
+import { ChainReactionFlow } from '@/components/ChainReactionFlow'
 import type { ContractAddresses } from '@/hooks/useContractData'
-
-interface StepResult {
-  step: string
-  hash?: string
-  data?: Record<string, unknown>
-}
 
 type StageStatus = 'pending' | 'running' | 'done' | 'error'
 type SetupStatus = 'idle' | 'running' | 'done' | 'error'
@@ -49,21 +45,53 @@ const STAGE_TAB_COLORS = [
 interface Props {
   addresses: ContractAddresses | null
   onRefresh: () => void
-  onAddressesChange: (a: ContractAddresses) => void
+  onAddressesChange: (a: ContractAddresses | null) => void
 }
 
 export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange }: Props) {
   const [activeStage, setActiveStage] = useState<1 | 2 | 3>(1)
   const [selectedVariants, setSelectedVariants] = useState<Record<number, VariantKey>>({ 1: 'good', 2: 'good', 3: 'good' })
   const [stageStatuses, setStageStatuses] = useState<Record<number, StageStatus>>({ 1: 'pending', 2: 'pending', 3: 'pending' })
-  const [stageResults, setStageResults] = useState<Record<number, StepResult[]>>({})
+  const [stageResults, setStageResults] = useState<Record<number, EnrichedStep[]>>({})
   const [executedVariants, setExecutedVariants] = useState<Record<number, VariantKey>>({})
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [setupStatus, setSetupStatus] = useState<SetupStatus>('idle')
+  const [hoveredContract, setHoveredContract] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
 
   const completedStages = new Set(
     Object.entries(stageStatuses).filter(([, s]) => s === 'done').map(([k]) => Number(k))
   )
+
+  const resetDemo = useCallback(async () => {
+    setResetting(true)
+    setErrorMsg(null)
+    try {
+      // Reset Anvil
+      const resetRes = await fetch('/api/demo/reset', { method: 'POST' })
+      const resetData = await resetRes.json()
+      if (!resetData.success) throw new Error(resetData.error || 'Reset failed')
+
+      // Redeploy contracts
+      const setupRes = await fetch('/api/demo/setup', { method: 'POST' })
+      const setupData = await setupRes.json()
+      if (!setupData.success) throw new Error(setupData.error || 'Setup failed')
+
+      // Clear all state and set new addresses
+      setActiveStage(1)
+      setSelectedVariants({ 1: 'good', 2: 'good', 3: 'good' })
+      setStageStatuses({ 1: 'pending', 2: 'pending', 3: 'pending' })
+      setStageResults({})
+      setExecutedVariants({})
+      setSetupStatus('done')
+      onAddressesChange(setupData.addresses)
+      onRefresh()
+    } catch (err) {
+      setErrorMsg(String(err))
+    } finally {
+      setResetting(false)
+    }
+  }, [onAddressesChange, onRefresh])
 
   const runSetup = useCallback(async () => {
     setSetupStatus('running')
@@ -107,8 +135,27 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
   const stageDef = STAGES[activeStage - 1]
   const currentVariant = selectedVariants[activeStage]
   const status = stageStatuses[activeStage]
-  const steps = stageResults[activeStage] ?? []
+  const steps: EnrichedStep[] = stageResults[activeStage] ?? []
   const isStageUnlocked = activeStage === 1 || completedStages.has(activeStage - 1)
+
+  // Derive active contracts and edges from step results
+  const activeContracts = new Set(steps.map(s => s.sourceContract).filter(Boolean))
+  const activeEdges = new Set(
+    steps
+      .filter(s => s.crossContractHook)
+      .map(s => `${s.crossContractHook!.from}→${s.crossContractHook!.to}`)
+  )
+  // Also add edges for CRE→contract when those contracts are active
+  if (activeContracts.has('SolvencyConsumer')) activeEdges.add('CRE Workflow→SolvencyConsumer')
+  if (activeContracts.has('MilestoneConsumer')) activeEdges.add('CRE Workflow→MilestoneConsumer')
+  if (activeContracts.has('ReserveVerifier')) {
+    activeEdges.add('ReserveVerifier→TokenizedFundingEngine')
+    activeEdges.add('ReserveVerifier→SolvencyConsumer')
+  }
+  // CRE is always active if any other contract is
+  if (activeContracts.size > 0) activeContracts.add('CRE Workflow')
+
+  const allHeroEvents = steps.flatMap(s => (s.events ?? []).filter(e => e.isHero))
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
@@ -117,14 +164,28 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Oceanwide Plaza — Interactive Scenario Demo</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 mt-0.5">
               Choose a scenario for each stage to see how the protocol responds differently
             </p>
           </div>
           {addresses && (
-            <span className="text-[10px] text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
-              Contracts Deployed
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
+                Contracts Deployed
+              </span>
+              <button
+                onClick={resetDemo}
+                disabled={resetting}
+                className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-2.5 py-1 rounded-md transition-colors disabled:opacity-50"
+              >
+                {resetting ? (
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 border border-gray-400 border-t-white rounded-full animate-spin" />
+                    Resetting...
+                  </span>
+                ) : 'Reset Demo'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -186,7 +247,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                       {isDone && <span className="text-xs">&#10003;</span>}
                       <span>Stage {s.id}: {s.label}</span>
                     </div>
-                    <div className="text-[10px] mt-0.5 opacity-70">{s.period}</div>
+                    <div className="text-xs mt-0.5 opacity-70">{s.period}</div>
                   </button>
                 )
               })}
@@ -194,7 +255,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
 
             {/* Stage Narrative */}
             <div className="bg-gray-800/40 rounded-lg p-4">
-              <p className="text-xs text-gray-300 leading-relaxed">{stageDef.narrative}</p>
+              <p className="text-sm text-gray-300 leading-relaxed">{stageDef.narrative}</p>
             </div>
 
             {/* Variant Cards */}
@@ -219,18 +280,16 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                       <div className={`px-3 py-2 rounded-t-lg ${vc.header} flex items-center justify-between`}>
                         <div>
                           <span className="text-sm font-semibold">{v.label}</span>
-                          {wasExecuted && <span className="ml-2 text-[10px] opacity-70">&#10003; ran</span>}
+                          {wasExecuted && <span className="ml-2 text-xs opacity-70">&#10003; ran</span>}
                         </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${vc.badge}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${vc.badge}`}>
                           {vk === 'good' ? 'GOOD' : vk === 'neutral' ? 'NEUTRAL' : 'BAD'}
                         </span>
                       </div>
 
                       <div className="px-3 py-3 space-y-2.5">
-                        {/* Tagline */}
-                        <p className="text-[11px] text-gray-400 italic">{v.tagline}</p>
+                        <p className="text-sm text-gray-400 italic">{v.tagline}</p>
 
-                        {/* Preview Metrics */}
                         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                           <MetricPill label="Solvency" value={v.preview.solvency} />
                           <MetricPill label="Risk" value={v.preview.risk} />
@@ -240,12 +299,11 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                           <MetricPill label="Funding" value={v.preview.funding} />
                         </div>
 
-                        {/* Triggers */}
                         <div>
-                          <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">What triggers</div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">What triggers</div>
                           <ul className="space-y-0.5">
                             {v.triggers.map((t, i) => (
-                              <li key={i} className="text-[11px] text-gray-400 flex items-start gap-1.5">
+                              <li key={i} className="text-sm text-gray-400 flex items-start gap-1.5">
                                 <span className="text-gray-600 mt-0.5 flex-shrink-0">&#8226;</span>
                                 {t}
                               </li>
@@ -253,12 +311,11 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                           </ul>
                         </div>
 
-                        {/* Outcomes */}
                         <div>
-                          <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">What you&apos;ll see</div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">What you&apos;ll see</div>
                           <ul className="space-y-0.5">
                             {v.outcomes.map((o, i) => (
-                              <li key={i} className="text-[11px] text-gray-400 flex items-start gap-1.5">
+                              <li key={i} className="text-sm text-gray-400 flex items-start gap-1.5">
                                 <span className="text-gray-600 mt-0.5 flex-shrink-0">&#8226;</span>
                                 {o}
                               </li>
@@ -266,7 +323,6 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                           </ul>
                         </div>
 
-                        {/* Execute Button */}
                         {isSelected && (
                           <button
                             onClick={(e) => {
@@ -322,10 +378,20 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
               </div>
             )}
 
-            {/* Transaction Log */}
+            {/* Chain Reaction Flow Diagram */}
+            {steps.length > 0 && (
+              <ChainReactionFlow
+                activeContracts={activeContracts}
+                activeEdges={activeEdges}
+                heroEvents={allHeroEvents}
+                hoveredContract={hoveredContract}
+              />
+            )}
+
+            {/* Enriched Transaction Log */}
             {steps.length > 0 && (
               <div className="bg-gray-800/30 rounded-lg p-4">
-                <h4 className="text-xs text-gray-500 mb-3 uppercase tracking-wider">
+                <h4 className="text-sm text-gray-500 mb-3 uppercase tracking-wider">
                   Transaction Log — Stage {activeStage}
                   {executedVariants[activeStage] && (
                     <span className="ml-2 normal-case text-gray-600">
@@ -338,16 +404,69 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                     const dotColor = executedVariants[activeStage]
                       ? VARIANT_COLORS[executedVariants[activeStage]].dot
                       : 'bg-blue-500'
+                    const contractColors = s.sourceContract ? CONTRACT_COLORS[s.sourceContract as ContractName] : null
+                    const contractShort = s.sourceContract ? CONTRACT_SHORT[s.sourceContract as ContractName] : null
+                    const heroEvents = (s.events ?? []).filter((e: DecodedEvent) => e.isHero)
+
                     return (
-                      <div key={i} className="flex items-start gap-3 py-1.5">
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 py-1.5 rounded px-1 -mx-1 transition-colors hover:bg-gray-800/40"
+                        onMouseEnter={() => s.sourceContract && setHoveredContract(s.sourceContract)}
+                        onMouseLeave={() => setHoveredContract(null)}
+                      >
                         <div className="flex flex-col items-center flex-shrink-0 mt-0.5">
                           <div className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
                           {i < steps.length - 1 && <div className="w-px h-4 bg-gray-700 mt-0.5" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs text-gray-300">{s.step}</div>
+                          {/* Contract badge + step text */}
+                          <div className="flex items-start gap-2">
+                            {contractColors && contractShort && (
+                              <span className={`flex-shrink-0 text-xs px-1.5 py-0.5 rounded ${contractColors.bg} ${contractColors.text} ${contractColors.border} border font-medium mt-px`}>
+                                {contractShort}
+                              </span>
+                            )}
+                            <span className="text-sm text-gray-300">{s.step}</span>
+                          </div>
+
+                          {/* Cross-contract hook indicator */}
+                          {s.crossContractHook && (
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <svg className="w-3 h-3 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                              <span className="text-xs text-blue-300">
+                                {CONTRACT_SHORT[s.crossContractHook.from as ContractName] ?? s.crossContractHook.from}
+                                {' → '}
+                                {CONTRACT_SHORT[s.crossContractHook.to as ContractName] ?? s.crossContractHook.to}
+                                {': '}
+                                <span className="text-blue-400/70">{s.crossContractHook.reason}</span>
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Hero event tags */}
+                          {heroEvents.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {heroEvents.map((evt: DecodedEvent, j: number) => {
+                                const evtColors = CONTRACT_COLORS[evt.contract]
+                                const argStr = Object.entries(evt.args).map(([k, v]) => `${k}=${v}`).join(' ')
+                                return (
+                                  <span
+                                    key={j}
+                                    className={`text-xs px-1.5 py-0.5 rounded ${evtColors?.bg ?? 'bg-gray-700'} ${evtColors?.text ?? 'text-gray-400'} font-mono`}
+                                  >
+                                    {evt.event}{argStr ? ` ${argStr}` : ''}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {/* Tx hash */}
                           {s.hash && (
-                            <div className="text-[10px] text-gray-600 font-mono truncate mt-0.5">
+                            <div className="text-xs text-gray-600 font-mono truncate mt-0.5">
                               tx: {s.hash}
                             </div>
                           )}
@@ -368,8 +487,8 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[9px] text-gray-600 uppercase tracking-wider">{label}</span>
-      <span className="text-[10px] text-gray-300 leading-tight">{value}</span>
+      <span className="text-xs text-gray-600 uppercase tracking-wider">{label}</span>
+      <span className="text-sm text-gray-300 leading-tight">{value}</span>
     </div>
   )
 }
