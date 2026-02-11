@@ -57,15 +57,12 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Demo Controls */}
-      <DemoControlPanel
+      {/* Oceanwide Plaza Scenario Demo */}
+      <OceanwideScenarioPanel
+        addresses={addresses}
         onRefresh={refresh}
         onAddressesChange={setAddresses}
-        addresses={addresses}
       />
-
-      {/* Oceanwide Plaza Scenario Demo */}
-      <OceanwideScenarioPanel addresses={addresses} onRefresh={refresh} />
 
       {/* Top Row: Solvency + Reserves */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -91,6 +88,20 @@ export default function Dashboard() {
 
       {/* Architecture Overview */}
       <ArchitecturePanel />
+
+      {/* Advanced Controls */}
+      <details className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+        <summary className="px-6 py-4 cursor-pointer text-sm text-gray-400 hover:text-gray-300 transition-colors select-none">
+          Advanced Controls (manual contract interactions)
+        </summary>
+        <div className="px-6 pb-6">
+          <DemoControlPanel
+            onRefresh={refresh}
+            onAddressesChange={setAddresses}
+            addresses={addresses}
+          />
+        </div>
+      </details>
     </div>
   )
 }
