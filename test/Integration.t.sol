@@ -6,6 +6,7 @@ import {SolvencyConsumer} from "../src/contracts/SolvencyConsumer.sol";
 import {MilestoneConsumer} from "../src/contracts/MilestoneConsumer.sol";
 import {TokenizedFundingEngine} from "../src/contracts/TokenizedFundingEngine.sol";
 import {ReserveVerifier} from "../src/contracts/ReserveVerifier.sol";
+import {ConfidentialSolvencyCompute} from "../src/contracts/ConfidentialSolvencyCompute.sol";
 
 /**
  * @title IntegrationTest
@@ -43,7 +44,8 @@ contract IntegrationTest is Test {
         engine = new TokenizedFundingEngine(
             "https://rvp.example.com/metadata/{id}.json",
             address(0), // no CCIP for integration test
-            0
+            0,
+            address(0)  // no price feed for integration test
         );
         reserves = new ReserveVerifier(address(engine));
 
@@ -379,5 +381,28 @@ contract IntegrationTest is Test {
 
         (, , status, , , , , ) = engine.getRoundInfo(1);
         assertEq(status, 4); // CANCELLED
+    }
+
+    // =========================================================================
+    // Confidential Compute → SolvencyConsumer Cross-Module Hook
+    // =========================================================================
+
+    function testConfidentialComputeHook() public {
+        // Deploy CC contract and wire to SolvencyConsumer
+        ConfidentialSolvencyCompute cc = new ConfidentialSolvencyCompute();
+        solvency.setConfidentialCompute(address(cc));
+
+        // Operator computes a solvency score inside CC
+        cc.computeSolvencyScore(projectId, 80, 70, 60, 50, 42);
+
+        // SolvencyConsumer reads the CC-verified score
+        (uint8 score, uint8 riskLevel, bytes32 attestationHash, bool enclaveVerified) =
+            solvency.getConfidentialSolvencyScore(projectId);
+
+        // Score: (80*35 + 70*20 + 60*25 + 50*20) / 100 = 67
+        assertEq(score, 67);
+        assertEq(riskLevel, 1); // MEDIUM
+        assertTrue(attestationHash != bytes32(0));
+        assertFalse(enclaveVerified); // Operator, not enclave
     }
 }

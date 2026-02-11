@@ -212,6 +212,19 @@ const CONFIDENTIAL_COMPUTE_ABI = [
  * are aggregated via median consensus for numeric fields and
  * identical consensus for the source string.
  */
+// ---------------------------------------------------------------------------
+// CHAINLINK DATA FEED GAP: Construction Material Price Feeds
+//
+// Chainlink Data Feeds currently do not cover construction material commodities
+// (steel, concrete, labor, lumber, fuel). This custom HTTP API demonstrates the
+// data schema and consumption pattern that a future Chainlink Construction
+// Materials Data Feed could provide. The weighted cost index approach mirrors
+// how existing Chainlink commodity feeds (gold, oil) are consumed.
+//
+// When Chainlink adds construction material feeds, replace this HTTP fetch with:
+//   const steelFeed = new DataFeed(runtime, { feedAddress: STEEL_INDEX_FEED })
+//   const steelIndex = steelFeed.latestAnswer()
+// ---------------------------------------------------------------------------
 const fetchCostIndices = (
   sendRequester: HTTPSendRequester,
   config: Config,
@@ -409,7 +422,12 @@ function computeSolvency(
   fundingMetrics: FundingMetrics,
 ): { components: SolvencyComponents; overallScore: number; riskLevel: number } {
   // --- [CONFIDENTIAL_COMPUTE_BOUNDARY_START] ---
-  // Everything between these markers will run inside CC enclave
+  // Everything between these markers will run inside a Chainlink Confidential
+  // Compute enclave when the CC SDK ships (expected early 2026). The enclave
+  // ensures sensitive financial data (budgets, burn rates, creditor exposure)
+  // is never visible to DON nodes — only the final score + attestation hash
+  // are published on-chain. Architecture is ready: swap this block for
+  // ccRuntime.execute(computeSolvency, { visibility: 'attestation-only' })
 
   const WEIGHTS = {
     financialHealth: 0.35,

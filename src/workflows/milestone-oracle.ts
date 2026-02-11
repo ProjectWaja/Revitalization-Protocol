@@ -162,6 +162,24 @@ const MILESTONE_CONSUMER_ABI = [
 // Step 1: Fetch Satellite Imagery Data (Node Mode — median consensus)
 // =============================================================================
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CHAINLINK DATA GAP: Construction Progress Verification Oracle
+//
+// No Chainlink oracle service currently covers satellite/drone imagery
+// analysis for construction site verification. This workflow demonstrates
+// the data schema and verification pipeline that a future Chainlink oracle
+// could provide:
+//   - Satellite change-detection scoring (structural progress over time)
+//   - Drone imagery resolution and cloud-cover quality metrics
+//   - City permit status aggregation and compliance tracking
+//
+// The external API calls here (satelliteApiUrl, permitApiUrl) represent
+// the data sources that a specialized Chainlink DON node could natively
+// ingest, eliminating the need for a centralized API proxy. This is a
+// real-world gap where Chainlink's decentralized oracle infrastructure
+// could bring trustless verification to physical-world construction data.
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Fetches satellite/drone imagery metadata from external API.
  * Each DON node fetches independently; numeric fields aggregated via median.

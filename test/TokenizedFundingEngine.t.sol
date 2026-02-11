@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {TokenizedFundingEngine} from "../src/contracts/TokenizedFundingEngine.sol";
+import {MockV3Aggregator} from "../src/contracts/MockV3Aggregator.sol";
 
 contract TokenizedFundingEngineTest is Test {
     TokenizedFundingEngine public engine;
@@ -20,7 +21,8 @@ contract TokenizedFundingEngineTest is Test {
         engine = new TokenizedFundingEngine(
             "https://rvp.example.com/metadata/{id}.json",
             address(0),     // No CCIP router for tests
-            0               // No chain selector for tests
+            0,              // No chain selector for tests
+            address(0)      // No price feed for basic tests
         );
 
         // Grant roles
@@ -371,5 +373,58 @@ contract TokenizedFundingEngineTest is Test {
 
         (, , uint8 status, , , , , ) = engine.getRoundInfo(1);
         assertEq(status, 0); // Still OPEN
+    }
+
+    // =========================================================================
+    // Test: Chainlink Data Feed — ETH/USD Price
+    // =========================================================================
+
+    function testGetEthPriceUsd() public {
+        // Deploy MockV3Aggregator with $2500 at 8 decimals
+        MockV3Aggregator mockFeed = new MockV3Aggregator(8, 2500_00000000);
+
+        // Deploy engine with price feed
+        TokenizedFundingEngine feedEngine = new TokenizedFundingEngine(
+            "https://rvp.example.com/metadata/{id}.json",
+            address(0), 0, address(mockFeed)
+        );
+
+        (int256 price, uint8 decimals) = feedEngine.getEthPriceUsd();
+        assertEq(price, 2500_00000000);
+        assertEq(decimals, 8);
+    }
+
+    function testGetRoundValueUsd() public {
+        // Deploy MockV3Aggregator with $2500 at 8 decimals
+        MockV3Aggregator mockFeed = new MockV3Aggregator(8, 2500_00000000);
+
+        // Deploy engine with price feed
+        TokenizedFundingEngine feedEngine = new TokenizedFundingEngine(
+            "https://rvp.example.com/metadata/{id}.json",
+            address(0), 0, address(mockFeed)
+        );
+        feedEngine.grantRole(feedEngine.SOLVENCY_ORACLE_ROLE(), solvencyOracle);
+        feedEngine.grantRole(feedEngine.MILESTONE_ORACLE_ROLE(), milestoneOracle);
+
+        // Create and fund a round
+        uint8[] memory mids = new uint8[](1);
+        mids[0] = 0;
+        uint16[] memory bp = new uint16[](1);
+        bp[0] = 10000;
+        feedEngine.createFundingRound(projectId, 10 ether, block.timestamp + 30 days, mids, bp);
+
+        vm.deal(investor1, 100 ether);
+        vm.prank(investor1);
+        feedEngine.invest{value: 10 ether}(1);
+
+        // 10 ETH * $2500 = $25,000 (in 8-decimal format = 2_500_000_000_000)
+        uint256 valueUsd = feedEngine.getRoundValueUsd(1);
+        assertEq(valueUsd, 25000_00000000);
+    }
+
+    function testGetEthPriceUsdRevertsWithoutFeed() public {
+        // Default engine has no price feed
+        vm.expectRevert("Price feed not set");
+        engine.getEthPriceUsd();
     }
 }

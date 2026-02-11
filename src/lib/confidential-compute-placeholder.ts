@@ -42,9 +42,10 @@ export function confidentialCompute<T>(
   metadata: ConfidentialMetadata,
 ): ConfidentialResult<T> {
   // =========================================================================
-  // TODO [CC-SDK]: Replace this block with Chainlink Confidential Compute
+  // CHAINLINK CONFIDENTIAL COMPUTE GAP
   //
-  // Expected integration pattern (based on CC docs preview):
+  // The Chainlink CC SDK is expected in early 2026 as part of CRE. When
+  // available, this pass-through will be replaced with real TEE execution:
   //
   //   import { ConfidentialRuntime } from '@chainlink/confidential-compute-sdk'
   //
@@ -58,6 +59,13 @@ export function confidentialCompute<T>(
   //     outputVisibility: metadata.sensitivity === 'critical' ? 'encrypted' : 'plaintext',
   //   })
   //
+  // The on-chain ConfidentialSolvencyCompute.sol contract is already wired:
+  //   - submitEnclaveResult() accepts enclave-signed scores
+  //   - SolvencyConsumer reads CC scores via getConfidentialSolvencyScore()
+  //   - Attestation hashes are stored on-chain for external verification
+  //
+  // This placeholder demonstrates the computation boundary and data flow
+  // that the real CC SDK will execute inside a hardware-isolated enclave.
   // =========================================================================
 
   const result = fn()

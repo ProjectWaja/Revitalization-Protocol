@@ -2,27 +2,17 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 // =============================================================================
-// Chainlink PoR Feed Interface (inline, no library install)
+// Chainlink Automation Interface
+// Compatible with Chainlink Automation — register as Custom Logic upkeep
+// at automation.chain.link with this contract address
 // =============================================================================
 
 interface AutomationCompatibleInterface_Verifier {
     function checkUpkeep(bytes calldata checkData) external returns (bool upkeepNeeded, bytes memory performData);
     function performUpkeep(bytes calldata performData) external;
-}
-
-interface AggregatorV3Interface {
-    function latestRoundData() external view returns (
-        uint80 roundId,
-        int256 answer,
-        uint256 startedAt,
-        uint256 updatedAt,
-        uint80 answeredInRound
-    );
-
-    function decimals() external view returns (uint8);
-    function description() external view returns (string memory);
 }
 
 /**
@@ -342,7 +332,12 @@ contract ReserveVerifier is Ownable, AutomationCompatibleInterface_Verifier {
     /**
      * @notice Configure a project's reserve verification parameters.
      * @param projectId The project to configure
-     * @param porFeedAddress Chainlink PoR data feed address (0x0 if none)
+     * @param porFeedAddress Chainlink PoR data feed address (0x0 if none).
+     *        NOTE: No Chainlink Proof of Reserves feed currently exists for
+     *        construction project escrow accounts. We use ETH/USD as a
+     *        demonstration feed on Sepolia. A dedicated PoR feed for
+     *        construction escrow would enable trustless verification of
+     *        project financial backing — a real-world gap Chainlink could fill.
      * @param reserveWallet On-chain wallet holding reserves (for balance check)
      * @param claimedReserves The project's self-reported reserves (USD * 1e6)
      * @param minimumReserveRatio Minimum acceptable ratio (basis points)

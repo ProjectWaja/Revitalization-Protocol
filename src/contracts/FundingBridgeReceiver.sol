@@ -2,43 +2,35 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {CCIPReceiver} from "@chainlink/contracts-ccip/contracts/applications/CCIPReceiver.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
 
 /**
  * @title FundingBridgeReceiver
  * @author Revitalization Protocol
- * @notice Minimal CCIP receiver stub for Polygon Amoy.
- *         Receives cross-chain funding messages from TokenizedFundingEngine on Sepolia.
+ * @notice CCIP receiver on Polygon Amoy that accepts cross-chain funding messages
+ *         from TokenizedFundingEngine on Sepolia.
  *
- * @dev Demonstrates cross-chain architecture intent without full CCIP implementation.
- *      In production, this would inherit from Chainlink's CCIPReceiver and handle
- *      token transfers, fund disbursement, and local state mirroring.
+ * @dev Inherits from Chainlink's real CCIPReceiver base contract:
+ *   - Router validation is handled by the `onlyRouter` modifier in CCIPReceiver
+ *   - Message routing is handled by `ccipReceive()` → `_ccipReceive()` pattern
+ *   - This contract adds source chain + sender validation on top
  *
  * Hackathon Categories: DeFi & Tokenization, CCIP Cross-Chain
  */
-contract FundingBridgeReceiver is Ownable {
-    // =========================================================================
-    // CCIP Inline Interface (minimal receiver)
-    // =========================================================================
-
-    struct Any2EVMMessage {
-        bytes32 messageId;
-        uint64 sourceChainSelector;
-        bytes sender;
-        bytes data;
-    }
-
+contract FundingBridgeReceiver is CCIPReceiver, Ownable {
     // =========================================================================
     // State
     // =========================================================================
 
-    /// @notice Authorized CCIP router address
-    address public ccipRouter;
-
-    /// @notice Authorized source chain selector (Sepolia)
+    /// @notice Authorized source chain selector (Sepolia: 16015286601757825753)
     uint64 public sourceChainSelector;
 
-    /// @notice Authorized sender on source chain (TokenizedFundingEngine)
+    /// @notice Authorized sender on source chain (TokenizedFundingEngine address)
     address public authorizedSender;
+
+    /// @notice Total messages received
+    uint256 public messageCount;
 
     /// @notice Received funding records
     mapping(bytes32 => ReceivedFunding) public receivedFundings;
@@ -62,7 +54,15 @@ contract FundingBridgeReceiver is Ownable {
         uint256 amount
     );
 
-    event RouterUpdated(address indexed newRouter);
+    event AuthorizedSenderUpdated(address indexed newSender);
+    event SourceChainSelectorUpdated(uint64 newSelector);
+
+    // =========================================================================
+    // Errors
+    // =========================================================================
+
+    error InvalidSourceChain(uint64 received, uint64 expected);
+    error UnauthorizedSender(address received, address expected);
 
     // =========================================================================
     // Constructor
@@ -72,27 +72,34 @@ contract FundingBridgeReceiver is Ownable {
         address _ccipRouter,
         uint64 _sourceChainSelector,
         address _authorizedSender
-    ) Ownable(msg.sender) {
-        ccipRouter = _ccipRouter;
+    ) CCIPReceiver(_ccipRouter) Ownable(msg.sender) {
         sourceChainSelector = _sourceChainSelector;
         authorizedSender = _authorizedSender;
     }
 
     // =========================================================================
-    // CCIP Receive Handler
+    // CCIP Receive Handler (real CCIPReceiver override)
     // =========================================================================
 
     /**
-     * @notice Called by the CCIP router when a cross-chain message arrives.
-     * @dev In production, this would be _ccipReceive() from CCIPReceiver.
-     *      For hackathon, we use a public function gated by router check.
+     * @notice Internal handler called by CCIPReceiver.ccipReceive() after
+     *         the onlyRouter modifier validates the caller is the CCIP router.
+     * @dev Validates source chain and sender, then decodes and stores funding data.
+     * @param message The cross-chain message from Sepolia
      */
-    function ccipReceive(Any2EVMMessage calldata message) external {
-        require(msg.sender == ccipRouter, "Only CCIP router");
-        require(message.sourceChainSelector == sourceChainSelector, "Invalid source chain");
+    function _ccipReceive(
+        Client.Any2EVMMessage memory message
+    ) internal override {
+        // Validate source chain
+        if (message.sourceChainSelector != sourceChainSelector) {
+            revert InvalidSourceChain(message.sourceChainSelector, sourceChainSelector);
+        }
 
+        // Validate sender
         address sender = abi.decode(message.sender, (address));
-        require(sender == authorizedSender, "Unauthorized sender");
+        if (sender != authorizedSender) {
+            revert UnauthorizedSender(sender, authorizedSender);
+        }
 
         // Decode the funding data
         (
@@ -111,24 +118,38 @@ contract FundingBridgeReceiver is Ownable {
             receivedAt: uint64(block.timestamp)
         });
 
+        messageCount++;
+
         emit CrossChainFundingReceived(message.messageId, projectId, roundId, amount);
+    }
+
+    // =========================================================================
+    // Read Interface
+    // =========================================================================
+
+    function getReceivedFunding(bytes32 messageId) external view returns (
+        bytes32 projectId,
+        uint256 roundId,
+        uint8 roundType,
+        uint256 amount,
+        uint64 receivedAt
+    ) {
+        ReceivedFunding memory f = receivedFundings[messageId];
+        return (f.projectId, f.roundId, f.roundType, f.amount, f.receivedAt);
     }
 
     // =========================================================================
     // Admin
     // =========================================================================
 
-    function setRouter(address _router) external onlyOwner {
-        ccipRouter = _router;
-        emit RouterUpdated(_router);
-    }
-
     function setAuthorizedSender(address _sender) external onlyOwner {
         authorizedSender = _sender;
+        emit AuthorizedSenderUpdated(_sender);
     }
 
     function setSourceChainSelector(uint64 _selector) external onlyOwner {
         sourceChainSelector = _selector;
+        emit SourceChainSelectorUpdated(_selector);
     }
 
     // Allow contract to receive ETH

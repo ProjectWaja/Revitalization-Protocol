@@ -5,33 +5,14 @@ import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {IRouterClient} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
+import {Client} from "@chainlink/contracts-ccip/contracts/libraries/Client.sol";
 
 // =============================================================================
-// CCIP Inline Interfaces (Option B — no library install)
-// =============================================================================
-
-struct Client_EVM2AnyMessage {
-    bytes receiver;
-    bytes data;
-    address[] tokenAmounts;     // simplified — no token transfers in v1
-    address feeToken;           // address(0) for native
-    bytes extraArgs;
-}
-
-interface IRouterClient {
-    function ccipSend(
-        uint64 destinationChainSelector,
-        Client_EVM2AnyMessage calldata message
-    ) external payable returns (bytes32 messageId);
-
-    function getFee(
-        uint64 destinationChainSelector,
-        Client_EVM2AnyMessage calldata message
-    ) external view returns (uint256 fee);
-}
-
-// =============================================================================
-// Chainlink Automation Interface (inline — no library install)
+// Chainlink Automation Interface
+// Compatible with Chainlink Automation — register as Custom Logic upkeep
+// at automation.chain.link with this contract address
 // =============================================================================
 
 interface AutomationCompatibleInterface {
@@ -114,6 +95,9 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
     /// @notice Polygon Amoy chain selector for CCIP
     uint64 public polygonChainSelector;
 
+    /// @notice Chainlink ETH/USD price feed for USD-denominated reporting
+    AggregatorV3Interface public ethUsdPriceFeed;
+
     /// @notice Auto-incrementing round counter
     uint256 public nextRoundId = 1;
 
@@ -183,11 +167,15 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
     constructor(
         string memory uri_,
         address _ccipRouter,
-        uint64 _polygonChainSelector
+        uint64 _polygonChainSelector,
+        address _ethUsdPriceFeed
     ) ERC1155(uri_) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         ccipRouter = _ccipRouter;
         polygonChainSelector = _polygonChainSelector;
+        if (_ethUsdPriceFeed != address(0)) {
+            ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
+        }
     }
 
     // =========================================================================
@@ -441,12 +429,14 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
             amount
         );
 
-        Client_EVM2AnyMessage memory message = Client_EVM2AnyMessage({
+        Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
             receiver: abi.encode(destinationAddress),
             data: data,
-            tokenAmounts: new address[](0),
-            feeToken: address(0),
-            extraArgs: ""
+            tokenAmounts: new Client.EVMTokenAmount[](0),
+            extraArgs: Client._argsToBytes(
+                Client.GenericExtraArgsV2({gasLimit: 200_000, allowOutOfOrderExecution: true})
+            ),
+            feeToken: address(0)  // Pay in native ETH
         });
 
         uint256 fee = IRouterClient(ccipRouter).getFee(polygonChainSelector, message);
@@ -547,7 +537,42 @@ contract TokenizedFundingEngine is ERC1155, AccessControl, ReentrancyGuard, Paus
     }
 
     // =========================================================================
+    // Chainlink Data Feeds — Real ETH/USD Price
+    // =========================================================================
+
+    /**
+     * @notice Returns the current ETH/USD price from the Chainlink Data Feed.
+     * @dev Uses the real Chainlink AggregatorV3Interface.
+     *      Sepolia ETH/USD: 0x694AA1769357215DE4FAC081bf1f309aDC325306
+     */
+    function getEthPriceUsd() public view returns (int256 price, uint8 feedDecimals) {
+        require(address(ethUsdPriceFeed) != address(0), "Price feed not set");
+        (, price,,,) = ethUsdPriceFeed.latestRoundData();
+        feedDecimals = ethUsdPriceFeed.decimals();
+    }
+
+    /**
+     * @notice Returns a funding round's deposited value in USD.
+     * @param roundId The funding round to price
+     * @return valueUsd The USD value (scaled to feed decimals, typically 8)
+     */
+    function getRoundValueUsd(uint256 roundId) external view returns (uint256 valueUsd) {
+        FundingRound memory round = fundingRounds[roundId];
+        require(round.targetAmount > 0, "Round does not exist");
+        require(address(ethUsdPriceFeed) != address(0), "Price feed not set");
+
+        (int256 price,) = getEthPriceUsd();
+        require(price > 0, "Invalid price");
+
+        // totalDeposited is in wei, price is in USD with `decimals` precision
+        // Result: USD value with `decimals` precision
+        valueUsd = (round.totalDeposited * uint256(price)) / 1e18;
+    }
+
+    // =========================================================================
     // Chainlink Automation
+    // Compatible with Chainlink Automation — register as Custom Logic upkeep
+    // at automation.chain.link with this contract address
     // =========================================================================
 
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {

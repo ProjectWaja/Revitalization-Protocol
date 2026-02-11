@@ -7,6 +7,13 @@ interface ITokenizedFundingEngine_Rescue {
     function initiateRescueFunding(bytes32 projectId, uint8 solvencyScore) external;
 }
 
+interface IConfidentialSolvencyCompute {
+    function getLatestResult(bytes32 projectId) external view returns (
+        uint8 score, uint8 riskLevel, bytes32 attestationHash,
+        bool enclaveVerified, uint64 timestamp
+    );
+}
+
 /**
  * @title SolvencyConsumer
  * @author Revitalization Protocol
@@ -64,6 +71,11 @@ contract SolvencyConsumer is Ownable {
 
     /// @notice Rescue funding contract (typed interface for safe cross-module calls)
     ITokenizedFundingEngine_Rescue public rescueFundingEngine;
+
+    /// @notice Confidential Compute contract for privacy-preserving solvency scoring
+    /// @dev When CC SDK ships, the enclave submits scores here; SolvencyConsumer reads them.
+    ///      This creates a clear integration boundary: CC computes → SolvencyConsumer reads.
+    IConfidentialSolvencyCompute public confidentialCompute;
 
     /// @notice Project financial parameters (set by admin, read by CRE workflow)
     mapping(bytes32 => ProjectFinancials) public projectFinancials;
@@ -354,5 +366,32 @@ contract SolvencyConsumer is Ownable {
     function setRescueThreshold(uint8 _threshold) external onlyOwner {
         require(_threshold <= 100, "Invalid threshold");
         rescueThreshold = _threshold;
+    }
+
+    /**
+     * @notice Set the Confidential Compute contract address.
+     * @dev Enables reading privacy-preserving solvency scores computed inside
+     *      a Chainlink Confidential Compute enclave. When the CC SDK ships,
+     *      the enclave will call ConfidentialSolvencyCompute.submitEnclaveResult()
+     *      and this consumer reads the verified score.
+     */
+    function setConfidentialCompute(address _cc) external onlyOwner {
+        confidentialCompute = IConfidentialSolvencyCompute(_cc);
+    }
+
+    /**
+     * @notice Read the latest CC-verified solvency score for a project.
+     * @dev Returns the score computed inside the Confidential Compute enclave
+     *      along with the attestation hash for external verification.
+     */
+    function getConfidentialSolvencyScore(bytes32 projectId) external view returns (
+        uint8 score,
+        uint8 riskLevel,
+        bytes32 attestationHash,
+        bool enclaveVerified
+    ) {
+        require(address(confidentialCompute) != address(0), "CC not configured");
+        (score, riskLevel, attestationHash, enclaveVerified, ) =
+            confidentialCompute.getLatestResult(projectId);
     }
 }
