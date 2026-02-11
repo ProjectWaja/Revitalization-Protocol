@@ -22,7 +22,7 @@ export function TabNavigation({ activeTab, onTabChange }: Props) {
             <button
               key={tab.key}
               onClick={() => onTabChange(tab.key)}
-              className={`relative flex items-center gap-2 px-5 py-3.5 text-base font-medium transition-colors ${
+              className={`relative flex items-center gap-2.5 px-5 py-3.5 text-lg font-medium transition-colors ${
                 isActive
                   ? 'text-white'
                   : 'text-gray-500 hover:text-gray-300'
