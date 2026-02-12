@@ -159,12 +159,15 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
     addressesRef.current = overrideAddresses
   }
 
+  // Stable key that changes when addresses change — drives effect restart
+  const addressKey = overrideAddresses?.solvencyConsumer ?? ''
+
   const fetchData = useCallback(async () => {
     const addrs = addressesRef.current
     const isZero = addrs.solvencyConsumer === '0x0000000000000000000000000000000000000000'
     if (isZero) return
 
-    const rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? process.env.NEXT_PUBLIC_RPC_URL ?? 'http://127.0.0.1:8545'
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL ?? process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? 'http://127.0.0.1:8545'
     const isAnvil = rpcUrl.includes('127.0.0.1') || rpcUrl.includes('localhost')
     const chain = isAnvil ? foundry : sepolia
 
@@ -398,7 +401,9 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       let friendly = msg
-      if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+      if (msg.includes('quota') || msg.includes('-32004') || msg.includes('403')) {
+        friendly = 'Tenderly quota limit reached — reads may be delayed. Upgrade plan or wait for reset.'
+      } else if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
         friendly = 'Cannot connect to RPC — is Anvil running? (anvil --host 127.0.0.1)'
       } else if (msg.includes('execution reverted')) {
         friendly = 'Contract call reverted — click "Deploy & Setup" first'
@@ -410,8 +415,10 @@ export function useContractData(overrideAddresses?: ContractAddresses | null) {
         error: friendly,
       }))
     }
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressKey])
 
+  // Re-fetch immediately when addresses change, and restart polling
   useEffect(() => {
     fetchData()
     const interval = setInterval(fetchData, POLL_INTERVAL)

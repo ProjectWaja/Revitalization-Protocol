@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { STAGES, type VariantKey, type ScenarioVariant } from '@/lib/scenario-definitions'
 import { CONTRACT_COLORS, CONTRACT_SHORT, type ContractName, type DecodedEvent, type EnrichedStep } from '@/lib/chain-events'
 import { ChainReactionFlow } from '@/components/ChainReactionFlow'
+import { IS_TENDERLY, ADDRESSES } from '@/lib/contracts'
 import type { ContractAddresses } from '@/hooks/useContractData'
 
 type StageStatus = 'pending' | 'running' | 'done' | 'error'
@@ -59,6 +60,19 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
   const [hoveredContract, setHoveredContract] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
 
+  // In Tenderly mode, auto-load pre-deployed contract addresses
+  useEffect(() => {
+    if (IS_TENDERLY && !addresses) {
+      onAddressesChange({
+        solvencyConsumer: ADDRESSES.solvencyConsumer,
+        milestoneConsumer: ADDRESSES.milestoneConsumer,
+        fundingEngine: ADDRESSES.fundingEngine,
+        reserveVerifier: ADDRESSES.reserveVerifier,
+      })
+      setSetupStatus('done')
+    }
+  }, [addresses, onAddressesChange])
+
   const completedStages = new Set(
     Object.entries(stageStatuses).filter(([, s]) => s === 'done').map(([k]) => Number(k))
   )
@@ -67,24 +81,38 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
     setResetting(true)
     setErrorMsg(null)
     try {
-      // Reset Anvil
-      const resetRes = await fetch('/api/demo/reset', { method: 'POST' })
-      const resetData = await resetRes.json()
-      if (!resetData.success) throw new Error(resetData.error || 'Reset failed')
+      if (IS_TENDERLY) {
+        // Tenderly: just clear UI state, keep existing contracts
+        setActiveStage(1)
+        setSelectedVariants({ 1: 'good', 2: 'good', 3: 'good' })
+        setStageStatuses({ 1: 'pending', 2: 'pending', 3: 'pending' })
+        setStageResults({})
+        setExecutedVariants({})
+        setSetupStatus('done')
+        onAddressesChange({
+          solvencyConsumer: ADDRESSES.solvencyConsumer,
+          milestoneConsumer: ADDRESSES.milestoneConsumer,
+          fundingEngine: ADDRESSES.fundingEngine,
+          reserveVerifier: ADDRESSES.reserveVerifier,
+        })
+      } else {
+        // Anvil: full reset + redeploy
+        const resetRes = await fetch('/api/demo/reset', { method: 'POST' })
+        const resetData = await resetRes.json()
+        if (!resetData.success) throw new Error(resetData.error || 'Reset failed')
 
-      // Redeploy contracts
-      const setupRes = await fetch('/api/demo/setup', { method: 'POST' })
-      const setupData = await setupRes.json()
-      if (!setupData.success) throw new Error(setupData.error || 'Setup failed')
+        const setupRes = await fetch('/api/demo/setup', { method: 'POST' })
+        const setupData = await setupRes.json()
+        if (!setupData.success) throw new Error(setupData.error || 'Setup failed')
 
-      // Clear all state and set new addresses
-      setActiveStage(1)
-      setSelectedVariants({ 1: 'good', 2: 'good', 3: 'good' })
-      setStageStatuses({ 1: 'pending', 2: 'pending', 3: 'pending' })
-      setStageResults({})
-      setExecutedVariants({})
-      setSetupStatus('done')
-      onAddressesChange(setupData.addresses)
+        setActiveStage(1)
+        setSelectedVariants({ 1: 'good', 2: 'good', 3: 'good' })
+        setStageStatuses({ 1: 'pending', 2: 'pending', 3: 'pending' })
+        setStageResults({})
+        setExecutedVariants({})
+        setSetupStatus('done')
+        onAddressesChange(setupData.addresses)
+      }
       onRefresh()
     } catch (err) {
       setErrorMsg(String(err))
@@ -94,6 +122,17 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
   }, [onAddressesChange, onRefresh])
 
   const runSetup = useCallback(async () => {
+    if (IS_TENDERLY) {
+      // In Tenderly mode, just load pre-deployed addresses
+      onAddressesChange({
+        solvencyConsumer: ADDRESSES.solvencyConsumer,
+        milestoneConsumer: ADDRESSES.milestoneConsumer,
+        fundingEngine: ADDRESSES.fundingEngine,
+        reserveVerifier: ADDRESSES.reserveVerifier,
+      })
+      setSetupStatus('done')
+      return
+    }
     setSetupStatus('running')
     try {
       const res = await fetch('/api/demo/setup', { method: 'POST' })
@@ -183,7 +222,7 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                     <span className="w-2.5 h-2.5 border border-gray-400 border-t-white rounded-full animate-spin" />
                     Resetting...
                   </span>
-                ) : 'Reset Demo'}
+                ) : IS_TENDERLY ? 'Clear Results' : 'Reset Demo'}
               </button>
             </div>
           )}
@@ -193,25 +232,33 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
       <div className="px-6 pb-6 pt-4 space-y-5">
         {/* Setup Banner */}
         {!addresses && (
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-5">
+          <div className={`${IS_TENDERLY ? 'bg-purple-500/10 border-purple-500/30' : 'bg-blue-500/10 border-blue-500/30'} border rounded-lg p-5`}>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-medium text-blue-300">Deploy Contracts to Anvil</h3>
+                <h3 className={`text-lg font-medium ${IS_TENDERLY ? 'text-purple-300' : 'text-blue-300'}`}>
+                  {IS_TENDERLY ? 'Connect to Tenderly Contracts' : 'Deploy Contracts to Anvil'}
+                </h3>
                 <p className="text-base text-gray-400 mt-1">
-                  Deploys SolvencyConsumer, MilestoneConsumer, TokenizedFundingEngine, ReserveVerifier and wires cross-module hooks.
+                  {IS_TENDERLY
+                    ? 'Loading pre-deployed contracts from Tenderly Virtual TestNet...'
+                    : 'Deploys SolvencyConsumer, MilestoneConsumer, TokenizedFundingEngine, ReserveVerifier and wires cross-module hooks.'}
                 </p>
               </div>
               <button
                 onClick={runSetup}
                 disabled={setupStatus === 'running'}
-                className="flex-shrink-0 px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg text-base font-medium transition-colors"
+                className={`flex-shrink-0 px-6 py-3 ${IS_TENDERLY ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'} disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg text-base font-medium transition-colors`}
               >
                 {setupStatus === 'running' ? (
                   <span className="flex items-center gap-2">
                     <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-white rounded-full animate-spin" />
-                    Deploying...
+                    {IS_TENDERLY ? 'Connecting...' : 'Deploying...'}
                   </span>
-                ) : setupStatus === 'error' ? 'Retry Deploy' : 'Deploy & Setup'}
+                ) : setupStatus === 'error' ? (
+                  IS_TENDERLY ? 'Retry Connect' : 'Retry Deploy'
+                ) : (
+                  IS_TENDERLY ? 'Connect' : 'Deploy & Setup'
+                )}
               </button>
             </div>
             {setupStatus === 'error' && errorMsg && (
@@ -365,8 +412,22 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
 
             {/* Error */}
             {errorMsg && status === 'error' && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2 text-xs text-red-300">
-                {errorMsg}
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
+                {(errorMsg.includes('quota') || errorMsg.includes('-32004') || errorMsg.includes('403')) ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-red-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm font-medium text-red-300">Tenderly quota limit reached</span>
+                    </div>
+                    <p className="text-xs text-red-300/70 ml-6">
+                      Your Tenderly Virtual TestNet plan has hit its RPC call limit. Upgrade your plan or wait for the quota to reset, then try again.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-sm text-red-300">{errorMsg}</div>
+                )}
               </div>
             )}
 
@@ -464,10 +525,23 @@ export function OceanwideScenarioPanel({ addresses, onRefresh, onAddressesChange
                             </div>
                           )}
 
-                          {/* Tx hash */}
+                          {/* Tx hash + Tenderly trace link */}
                           {s.hash && (
-                            <div className="text-sm text-gray-600 font-mono truncate mt-0.5">
-                              tx: {s.hash}
+                            <div className="text-sm font-mono truncate mt-0.5 flex items-center gap-2">
+                              <span className="text-gray-600">tx: {s.hash.slice(0, 18)}...</span>
+                              {process.env.NEXT_PUBLIC_TENDERLY_EXPLORER && (
+                                <a
+                                  href={`${process.env.NEXT_PUBLIC_TENDERLY_EXPLORER}/tx/${s.hash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors bg-purple-400/10 px-2 py-0.5 rounded"
+                                >
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                  Trace
+                                </a>
+                              )}
                             </div>
                           )}
                         </div>

@@ -11,15 +11,20 @@ const RISK_COLORS: Record<string, { text: string; bg: string }> = {
 const VERIFICATION_STATUS = ['UNVERIFIED', 'VERIFIED', 'UNDER_RESERVED', 'STALE_DATA', 'FEED_UNAVAILABLE'] as const
 
 export function MetricsSummary({ data }: { data: DashboardData }) {
+  const hasSolvencyData = data.solvency.timestamp > 0
   const risk = RISK_LABELS[data.solvency.riskLevel] ?? 'LOW'
   const riskColor = RISK_COLORS[risk]
 
   const completedMilestones = data.milestones.filter((m) => m.progress === 100 && m.approved).length
+  const inProgressMilestones = data.milestones.filter((m) => m.progress > 0 && !(m.progress === 100 && m.approved)).length
   const totalMilestones = data.milestones.length
-  const milestonePercent = totalMilestones > 0 ? (completedMilestones / totalMilestones) * 100 : 0
+  const overallProgress = totalMilestones > 0
+    ? data.milestones.reduce((sum, m) => sum + m.progress, 0) / totalMilestones
+    : 0
 
   const totalRaised = data.rounds.reduce((sum, r) => sum + r.totalDeposited, 0)
   const totalTarget = data.rounds.reduce((sum, r) => sum + r.targetAmount, 0)
+  const totalReleased = data.rounds.reduce((sum, r) => sum + r.totalReleased, 0)
 
   const engineStatus = VERIFICATION_STATUS[data.reserves.engine.status] ?? 'UNVERIFIED'
   const coverageRatio = data.reserves.engine.reportedDeposits > 0
@@ -31,21 +36,33 @@ export function MetricsSummary({ data }: { data: DashboardData }) {
       {/* Solvency Score */}
       <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
         <div className="text-base text-gray-400 mb-1">Solvency Score</div>
-        <div className="flex items-end gap-3">
-          <span className={`text-4xl font-bold font-mono ${
-            data.solvency.overallScore >= 75 ? 'text-green-400' :
-            data.solvency.overallScore >= 50 ? 'text-yellow-400' :
-            data.solvency.overallScore >= 25 ? 'text-orange-400' : 'text-red-400'
-          }`}>
-            {data.solvency.overallScore}
-          </span>
-          <span className={`text-base font-medium px-2 py-0.5 rounded ${riskColor.text} ${riskColor.bg} mb-1`}>
-            {risk}
-          </span>
-        </div>
-        <div className="text-base text-gray-500 mt-2">
-          {data.solvency.rescueTriggered ? 'Rescue triggered' : 'Normal operations'}
-        </div>
+        {hasSolvencyData ? (
+          <>
+            <div className="flex items-end gap-3">
+              <span className={`text-4xl font-bold font-mono ${
+                data.solvency.overallScore >= 75 ? 'text-green-400' :
+                data.solvency.overallScore >= 50 ? 'text-yellow-400' :
+                data.solvency.overallScore >= 25 ? 'text-orange-400' : 'text-red-400'
+              }`}>
+                {data.solvency.overallScore}
+              </span>
+              <span className={`text-base font-medium px-2 py-0.5 rounded ${riskColor.text} ${riskColor.bg} mb-1`}>
+                {risk}
+              </span>
+            </div>
+            <div className="text-base text-gray-500 mt-2">
+              {data.solvency.rescueTriggered ? 'Rescue triggered' :
+               data.solvency.financials.burnRate > 0
+                 ? `Burn: $${(data.solvency.financials.burnRate / 1_000_000).toFixed(1)}M/mo`
+                 : 'Normal operations'}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-3xl font-bold font-mono text-gray-600">--</div>
+            <div className="text-base text-gray-500 mt-2">Run a scenario to submit first report</div>
+          </>
+        )}
       </div>
 
       {/* Milestone Progress */}
@@ -57,11 +74,17 @@ export function MetricsSummary({ data }: { data: DashboardData }) {
         <div className="mt-2">
           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${milestonePercent === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-              style={{ width: `${milestonePercent}%` }}
+              className={`h-full rounded-full transition-all duration-500 ${completedMilestones === totalMilestones && totalMilestones > 0 ? 'bg-green-500' : 'bg-blue-500'}`}
+              style={{ width: `${overallProgress}%` }}
             />
           </div>
-          <div className="text-base text-gray-500 mt-1">{milestonePercent.toFixed(0)}% complete</div>
+          <div className="text-base text-gray-500 mt-1">
+            {completedMilestones > 0
+              ? `${overallProgress.toFixed(0)}% overall`
+              : inProgressMilestones > 0
+                ? `${inProgressMilestones} in progress`
+                : 'Run a scenario to begin'}
+          </div>
         </div>
       </div>
 
@@ -73,9 +96,16 @@ export function MetricsSummary({ data }: { data: DashboardData }) {
           <span className="text-lg text-gray-500"> ETH</span>
         </div>
         <div className="text-base text-gray-500 mt-2">
-          {totalTarget > 0 ? `${((totalRaised / totalTarget) * 100).toFixed(0)}% of ${totalTarget.toFixed(1)} ETH target` : 'No rounds active'}
+          {totalTarget > 0
+            ? `${((totalRaised / totalTarget) * 100).toFixed(0)}% of ${totalTarget.toFixed(1)} ETH target`
+            : 'No rounds active'}
           {data.rounds.length > 0 && ` — ${data.rounds.length} round${data.rounds.length !== 1 ? 's' : ''}`}
         </div>
+        {totalReleased > 0 && (
+          <div className="text-sm text-green-400/80 mt-1">
+            {totalReleased.toFixed(2)} ETH released via tranches
+          </div>
+        )}
       </div>
 
       {/* Reserve Coverage */}
@@ -89,7 +119,9 @@ export function MetricsSummary({ data }: { data: DashboardData }) {
         <div className="text-base text-gray-500 mt-2">
           {engineStatus === 'VERIFIED' ? 'Fully verified' :
            engineStatus === 'UNDER_RESERVED' ? 'Under-reserved' :
-           'Awaiting verification'}
+           data.reserves.engine.contractBalance > 0
+             ? `${data.reserves.engine.contractBalance.toFixed(2)} ETH in engine`
+             : 'Run scenario to verify reserves'}
         </div>
       </div>
     </div>

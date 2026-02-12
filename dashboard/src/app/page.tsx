@@ -12,6 +12,8 @@ import { DemoControlPanel } from '@/components/DemoControlPanel'
 import { OceanwideScenarioPanel } from '@/components/OceanwideScenarioPanel'
 import { TabNavigation } from '@/components/TabNavigation'
 import { MetricsSummary } from '@/components/MetricsSummary'
+import { NetworkStatusBar } from '@/components/NetworkStatusBar'
+import { ContractDeploymentPanel } from '@/components/ContractDeploymentPanel'
 import { useContractData, type ContractAddresses } from '@/hooks/useContractData'
 
 export default function Dashboard() {
@@ -66,6 +68,8 @@ export default function Dashboard() {
       {/* Tab Content — all tabs stay mounted to preserve state */}
       <div className="pt-2">
         <div className={activeTab === 'overview' ? 'space-y-6' : 'hidden'}>
+          <NetworkStatusBar />
+          <ContractDeploymentPanel />
           <OceanwideScenarioPanel
             addresses={addresses}
             onRefresh={refresh}

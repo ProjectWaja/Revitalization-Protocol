@@ -1,77 +1,17 @@
 /**
- * Deploy MilestoneConsumer.sol to Ethereum Sepolia
+ * Deploy MilestoneConsumer.sol
  *
  * Usage:
  *   bun run scripts/deploy-milestone.ts
  *
- * Required environment / secrets:
- *   DEPLOYER_PRIVATE_KEY  — Private key of the deploying wallet
- *   SEPOLIA_RPC_URL       — Alchemy/Infura Sepolia RPC endpoint
- *   AUTHORIZED_WORKFLOW   — (optional) CRE workflow DON address, defaults to deployer
+ * Supports both Sepolia and Tenderly Virtual TestNet.
+ * Set DEPLOY_NETWORK=tenderly in .env to use Tenderly.
  */
 
-import {
-  createWalletClient,
-  createPublicClient,
-  http,
-  type Address,
-  type Hex,
-} from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
-import { sepolia } from 'viem/chains'
+import { type Address, type Hex } from 'viem'
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
-
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
-interface DeployConfig {
-  deployerPrivateKey: Hex
-  sepoliaRpcUrl: string
-  authorizedWorkflow?: Address
-}
-
-function loadConfig(): DeployConfig {
-  let secrets: Record<string, string> = {}
-
-  try {
-    const secretsPath = join(import.meta.dir, '..', 'config', 'secrets.json')
-    secrets = JSON.parse(readFileSync(secretsPath, 'utf-8'))
-  } catch {
-    // No secrets file — rely on env vars
-  }
-
-  const deployerPrivateKey = (
-    secrets.DEPLOYER_PRIVATE_KEY ??
-    process.env.DEPLOYER_PRIVATE_KEY ??
-    ''
-  ) as Hex
-
-  const sepoliaRpcUrl =
-    secrets.SEPOLIA_RPC_URL ??
-    process.env.SEPOLIA_RPC_URL ??
-    ''
-
-  const authorizedWorkflow = (
-    secrets.AUTHORIZED_WORKFLOW ??
-    process.env.AUTHORIZED_WORKFLOW ??
-    undefined
-  ) as Address | undefined
-
-  if (!deployerPrivateKey) {
-    throw new Error(
-      'Missing DEPLOYER_PRIVATE_KEY. Set it in config/secrets.json or as an env var.',
-    )
-  }
-  if (!sepoliaRpcUrl) {
-    throw new Error(
-      'Missing SEPOLIA_RPC_URL. Set it in config/secrets.json or as an env var.',
-    )
-  }
-
-  return { deployerPrivateKey, sepoliaRpcUrl, authorizedWorkflow }
-}
+import { getNetworkConfig, printNetworkBanner, checkBalance } from './lib/network'
 
 // ---------------------------------------------------------------------------
 // Contract ABI
@@ -114,42 +54,12 @@ const MILESTONE_CONSUMER_ABI = [
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log('='.repeat(60))
-  console.log('Revitalization Protocol — MilestoneConsumer Deployment')
-  console.log('='.repeat(60))
-
-  const config = loadConfig()
-  const account = privateKeyToAccount(config.deployerPrivateKey)
-
-  console.log(`\nDeployer:  ${account.address}`)
-  console.log(`Chain:     Ethereum Sepolia (${sepolia.id})`)
-  console.log(`RPC:       ${config.sepoliaRpcUrl.replace(/\/[^/]*$/, '/***')}`)
-
-  const publicClient = createPublicClient({
-    chain: sepolia,
-    transport: http(config.sepoliaRpcUrl),
-  })
-
-  const walletClient = createWalletClient({
-    account,
-    chain: sepolia,
-    transport: http(config.sepoliaRpcUrl),
-  })
-
-  // Check deployer balance
-  const balance = await publicClient.getBalance({ address: account.address })
-  const balanceEth = Number(balance) / 1e18
-  console.log(`Balance:   ${balanceEth.toFixed(4)} ETH`)
-
-  if (balanceEth < 0.01) {
-    throw new Error(
-      `Insufficient balance (${balanceEth} ETH). Need at least 0.01 ETH. ` +
-      'Get testnet ETH from https://faucets.chain.link',
-    )
-  }
+  const net = getNetworkConfig()
+  printNetworkBanner(net, 'MilestoneConsumer Deployment')
+  await checkBalance(net)
 
   // Determine authorized workflow address (default to deployer for testing)
-  const authorizedWorkflow = config.authorizedWorkflow ?? account.address
+  const authorizedWorkflow = (process.env.AUTHORIZED_WORKFLOW ?? net.account.address) as Address
   console.log(`Workflow:  ${authorizedWorkflow}`)
 
   // Load compiled bytecode
@@ -177,7 +87,7 @@ async function main() {
   // Deploy
   console.log('\nDeploying MilestoneConsumer...')
 
-  const hash = await walletClient.deployContract({
+  const hash = await net.walletClient.deployContract({
     abi: MILESTONE_CONSUMER_ABI,
     bytecode,
     args: [authorizedWorkflow],
@@ -186,7 +96,7 @@ async function main() {
   console.log(`TX hash:   ${hash}`)
   console.log('Waiting for confirmation...')
 
-  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  const receipt = await net.publicClient.waitForTransactionReceipt({ hash })
   const contractAddress = receipt.contractAddress!
 
   console.log(`\nDeployed!`)
@@ -200,25 +110,25 @@ async function main() {
   const projectId =
     '0x5265766974616c697a6174696f6e50726f746f636f6c00000000000000000001' as Hex
 
-  const regHash = await walletClient.writeContract({
+  const regHash = await net.walletClient.writeContract({
     address: contractAddress,
     abi: MILESTONE_CONSUMER_ABI,
     functionName: 'registerProjectMilestones',
     args: [projectId, 4],
   })
 
-  const regReceipt = await publicClient.waitForTransactionReceipt({
+  const regReceipt = await net.publicClient.waitForTransactionReceipt({
     hash: regHash,
   })
   console.log(`Registered: TX ${regHash} (block ${regReceipt.blockNumber})`)
 
   // Save deployment info
   const deployment = {
-    network: 'sepolia',
-    chainId: sepolia.id,
+    network: net.network,
+    chainId: net.chain.id,
     contractAddress,
     authorizedWorkflow,
-    deployer: account.address,
+    deployer: net.account.address,
     deployTxHash: hash,
     blockNumber: Number(receipt.blockNumber),
     demoProjectId: projectId,
@@ -229,10 +139,10 @@ async function main() {
 
   const deploymentsDir = join(import.meta.dir, '..', 'deployments')
   mkdirSync(deploymentsDir, { recursive: true })
-  const deploymentPath = join(deploymentsDir, 'sepolia-milestone.json')
+  const deploymentPath = join(deploymentsDir, `${net.network}-milestone.json`)
   writeFileSync(deploymentPath, JSON.stringify(deployment, null, 2))
 
-  console.log(`\nDeployment saved to: deployments/sepolia-milestone.json`)
+  console.log(`\nDeployment saved to: deployments/${net.network}-milestone.json`)
 
   // Update the workflow config with the deployed address
   const configPath = join(

@@ -8,12 +8,17 @@ import { sepolia } from 'viem/chains'
 export function getClient(rpcUrl?: string) {
   return createPublicClient({
     chain: sepolia,
-    transport: http(rpcUrl ?? process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? 'https://eth-sepolia.g.alchemy.com/v2/demo'),
+    transport: http(
+      rpcUrl ??
+      process.env.NEXT_PUBLIC_RPC_URL ??
+      process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
+      'http://127.0.0.1:8545'
+    ),
   })
 }
 
 // ---------------------------------------------------------------------------
-// Addresses (updated by deploy scripts)
+// Addresses (updated by deploy scripts or .env.local)
 // ---------------------------------------------------------------------------
 
 export const ADDRESSES = {
@@ -24,6 +29,15 @@ export const ADDRESSES = {
 }
 
 export const PROJECT_ID = '0x5265766974616c697a6174696f6e50726f746f636f6c00000000000000000001' as `0x${string}`
+
+// ---------------------------------------------------------------------------
+// Network info (for UI components)
+// ---------------------------------------------------------------------------
+
+export const NETWORK_NAME = process.env.NEXT_PUBLIC_NETWORK ?? 'anvil'
+export const IS_TENDERLY = NETWORK_NAME === 'tenderly'
+export const TENDERLY_EXPLORER = process.env.NEXT_PUBLIC_TENDERLY_EXPLORER ?? ''
+export const DEPLOYER_ADDRESS = process.env.NEXT_PUBLIC_DEPLOYER_ADDRESS ?? ''
 
 // ---------------------------------------------------------------------------
 // ABIs (minimal read-only subsets)

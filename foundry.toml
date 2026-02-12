@@ -8,3 +8,12 @@ optimizer_runs = 200
 
 [profile.default.fmt]
 line_length = 100
+
+# RPC endpoints for forge script --rpc-url <name>
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+tenderly = "${TENDERLY_VIRTUAL_TESTNET_RPC}"
+
+# Etherscan verification (Tenderly provides built-in verification)
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.etherscan.io/api" }

@@ -1,6 +1,20 @@
 import type { Metadata } from 'next'
 import './globals.css'
 
+const networkName = process.env.NEXT_PUBLIC_NETWORK === 'tenderly'
+  ? 'Tenderly Virtual TestNet'
+  : process.env.NEXT_PUBLIC_NETWORK === 'anvil'
+    ? 'Local Anvil'
+    : 'Sepolia Testnet'
+
+const networkColor = process.env.NEXT_PUBLIC_NETWORK === 'tenderly'
+  ? 'text-purple-400'
+  : 'text-gray-400'
+
+const dotColor = process.env.NEXT_PUBLIC_NETWORK === 'tenderly'
+  ? 'bg-purple-400'
+  : 'bg-green-500'
+
 export const metadata: Metadata = {
   title: 'Revitalization Protocol — Oceanwide Plaza',
   description: 'Infrastructure project monitoring powered by Chainlink CRE, CCIP, and Proof of Reserves',
@@ -18,9 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
               <span className="text-xl font-semibold">Revitalization Protocol</span>
             </div>
-            <div className="flex items-center gap-4 text-base text-gray-400">
-              <span>Sepolia Testnet</span>
-              <span className="w-2 h-2 bg-green-500 rounded-full inline-block" />
+            <div className="flex items-center gap-4 text-base">
+              <span className={networkColor}>{networkName}</span>
+              <span className={`w-2 h-2 ${dotColor} rounded-full inline-block animate-pulse`} />
             </div>
           </div>
         </nav>
